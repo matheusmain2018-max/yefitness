@@ -1,8 +1,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let genAI: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!genAI) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key || key === 'undefined') {
+      throw new Error("GEMINI_API_KEY is not defined. Please set it in your environment variables.");
+    }
+    genAI = new GoogleGenAI({ apiKey: key });
+  }
+  return genAI;
+}
 
 export async function analyzeMeal(mealDescription: string) {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Analise a seguinte descrição de refeição e forneça os macronutrientes aproximados (calorias, proteínas, carboidratos, gorduras) em formato JSON. Refeição: "${mealDescription}"`,
@@ -26,6 +38,7 @@ export async function analyzeMeal(mealDescription: string) {
 }
 
 export async function analyzeEvolution(photos: { front?: string, back?: string, side?: string, biceps?: string }) {
+  const ai = getAI();
   const parts = [
     { text: "Compare estas fotos de evolução física. Analise mudanças na composição corporal, definição muscular e postura. Seja motivador e técnico." }
   ];
@@ -40,7 +53,7 @@ export async function analyzeEvolution(photos: { front?: string, back?: string, 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: { parts }
-  });
+  } as any);
 
   return response.text;
 }
