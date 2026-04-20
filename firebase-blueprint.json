@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User fitness profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "weight": { "type": "number" },
+        "height": { "type": "number" },
+        "healthIssues": { "type": "string" },
+        "theme": { "type": "string", "enum": ["dark", "light", "gym-neon", "sunset"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name"]
+    },
+    "Meal": {
+      "title": "Meal Log",
+      "description": "AI analyzed food intake",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "description": { "type": "string" },
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "carbs": { "type": "number" },
+        "fat": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "date", "description"]
+    },
+    "Workout": {
+      "title": "Workout Entry",
+      "description": "Historical workout record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "exercises": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "weight": { "type": "number" },
+              "sets": { "type": "number" },
+              "reps": { "type": "number" }
+            }
+          }
+        },
+        "type": { "type": "string", "enum": ["home", "gym"] }
+      },
+      "required": ["userId", "date"]
+    },
+    "Supplement": {
+      "title": "Supplement Task",
+      "description": "Daily supplement reminder and check",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "time": { "type": "string" },
+        "checks": { "type": "object", "description": "Map of date strings to boolean" }
+      },
+      "required": ["userId", "name"]
+    },
+    "Cardio": {
+      "title": "Cardio Task",
+      "description": "Daily cardio reminder and check",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "duration": { "type": "number" },
+        "checks": { "type": "object", "description": "Map of date strings to boolean" }
+      },
+      "required": ["userId", "name"]
+    },
+    "Evolution": {
+      "title": "Evolution Record",
+      "description": "Photos and measurements for evolution tracking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "photos": {
+          "type": "object",
+          "properties": {
+            "front": { "type": "string" },
+            "back": { "type": "string" },
+            "biceps": { "type": "string" },
+            "side": { "type": "string" }
+          }
+        },
+        "measurements": {
+          "type": "object",
+          "properties": {
+            "chest": { "type": "number" },
+            "waist": { "type": "number" },
+            "biceps": { "type": "number" },
+            "thigh": { "type": "number" }
+          }
+        },
+        "aiAnalysis": { "type": "string" }
+      },
+      "required": ["userId", "date"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": { "schema": "User", "description": "Individual user settings" },
+    "meals": { "schema": "Meal", "description": "Food logs" },
+    "workouts": { "schema": "Workout", "description": "Exercise logs" },
+    "supplements": { "schema": "Supplement", "description": "Supplement schedule" },
+    "cardios": { "schema": "Cardio", "description": "Cardio schedule" },
+    "evolution": { "schema": "Evolution", "description": "Health evolution history" }
+  }
+}

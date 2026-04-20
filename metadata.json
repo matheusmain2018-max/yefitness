@@ -1,0 +1,13 @@
+{
+  "name": "YeeFit",
+  "description": "App fitness completo com IA para monitoramento de dieta, treinos, suplementação e evolução física.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "AI-powered Diet Analysis",
+    "Workout Tracking",
+    "Evolution Photo Comparison",
+    "Health Monitoring"
+  ]
+}
