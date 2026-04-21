@@ -25,15 +25,33 @@ export default function Settings({ profile, user }: Props) {
     theme: profile?.theme || 'gym-neon'
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // Sync with profile when it first loads
+  React.useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || '',
+        weight: profile.weight || 0,
+        height: profile.height || 0,
+        healthIssues: profile.healthIssues || '',
+        theme: profile.theme || 'gym-neon'
+      });
+    }
+  }, [profile?.uid]); // Update only when user changes or first load
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setIsSaving(true);
+    setSaveStatus('idle');
     try {
       await updateDoc(doc(db, 'users', user.uid), formData);
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
       console.error(error);
+      setSaveStatus('error');
     } finally {
       setIsSaving(false);
     }
@@ -139,11 +157,28 @@ export default function Settings({ profile, user }: Props) {
           disabled={isSaving}
           className={cn(
             "w-full font-black py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50",
-            bgAccentClass, "text-black", shadowAccentClass
+            saveStatus === 'success' ? 'bg-green-500 text-white' : 
+            saveStatus === 'error' ? 'bg-red-500 text-white' :
+            cn(bgAccentClass, "text-black", shadowAccentClass)
           )}
         >
-          <Save size={20} />
-          {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+          {isSaving ? (
+            <span className="flex items-center gap-2">
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
+                <Save size={20} />
+              </motion.div>
+              Salvando...
+            </span>
+          ) : saveStatus === 'success' ? (
+            'Alterações Salvas!'
+          ) : saveStatus === 'error' ? (
+            'Erro ao Salvar'
+          ) : (
+            <>
+              <Save size={20} />
+              Salvar Alterações
+            </>
+          )}
         </button>
       </form>
     </div>

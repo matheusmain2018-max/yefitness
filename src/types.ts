@@ -4,7 +4,7 @@ export interface UserProfile {
   weight?: number;
   height?: number;
   healthIssues?: string;
-  theme: 'dark' | 'light' | 'gym-neon' | 'sunset';
+  theme: 'dark' | 'light' | 'gym-neon' | 'sunset' | 'neon-blue' | 'neon-red' | 'neon-purple' | 'neon-cyan';
 }
 
 export interface Meal {
