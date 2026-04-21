@@ -8,7 +8,8 @@ import {
   TrendingUp, 
   Settings as SettingsIcon,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Heart
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout, db } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -197,7 +198,7 @@ export default function App() {
           transition={{ duration: 2, repeat: Infinity }}
           className={cn(accentClass)}
         >
-          <Dumbbell size={48} />
+          <Heart size={48} />
         </motion.div>
       </div>
     );
@@ -213,7 +214,7 @@ export default function App() {
         >
           <div className="flex justify-center mb-8">
             <div className={cn("p-4 rounded-full", bgAccentClass + "/10")}>
-              <Dumbbell className={cn("w-16 h-16", accentClass)} />
+              <Heart className={cn("w-16 h-16", accentClass)} />
             </div>
           </div>
           <h1 className="text-6xl font-black tracking-tighter text-white">YeeFit</h1>
@@ -262,7 +263,7 @@ export default function App() {
       <nav className="fixed left-0 top-0 bottom-0 w-64 p-6 hidden lg:flex flex-col border-r border-zinc-800/50 bg-black/20 backdrop-blur-3xl z-50">
         <div className="flex items-center gap-3 mb-12">
           <div className={cn("p-2 rounded-xl", bgAccentClass + "/10")}>
-            <Dumbbell className={cn(accentClass)} />
+            <Heart className={cn(accentClass)} />
           </div>
           <h1 className="text-3xl font-black tracking-tighter font-display">YeeFit</h1>
         </div>
