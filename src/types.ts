@@ -3,6 +3,10 @@ export interface UserProfile {
   name: string;
   weight?: number;
   height?: number;
+  age?: number;
+  gender?: 'male' | 'female';
+  goal?: 'lose' | 'maintain' | 'gain';
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
   healthIssues?: string;
   theme: 'dark' | 'light' | 'gym-neon' | 'sunset' | 'neon-blue' | 'neon-red' | 'neon-purple' | 'neon-cyan';
 }
@@ -16,6 +20,8 @@ export interface Meal {
   protein: number;
   carbs: number;
   fat: number;
+  aiComment?: string;
+  aiAdvice?: string;
   timestamp: any;
 }
 

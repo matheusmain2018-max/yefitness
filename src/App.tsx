@@ -9,7 +9,8 @@ import {
   Settings as SettingsIcon,
   LogOut,
   User as UserIcon,
-  Heart
+  Heart,
+  BookOpen
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout, db } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -20,6 +21,7 @@ import { twMerge } from 'tailwind-merge';
 
 // Pages
 import Diet from './pages/Diet';
+import Diary from './pages/Diary';
 import Workouts from './pages/Workouts';
 import Supplements from './pages/Supplements';
 import Cardios from './pages/Cardios';
@@ -194,9 +196,9 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <motion.div 
-          animate={{ scale: [1, 1.2, 1], rotate: 360 }}
+          animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className={cn(accentClass)}
+          className={cn(accentClass, "p-4")}
         >
           <Heart size={48} />
         </motion.div>
@@ -233,6 +235,7 @@ export default function App() {
 
   const tabs = [
     { id: 'dieta', label: 'Dieta', icon: Utensils },
+    { id: 'diario', label: 'Diário', icon: BookOpen },
     { id: 'treinos', label: 'Treinos', icon: Dumbbell },
     { id: 'suplementos', label: 'Suplementos', icon: Pill },
     { id: 'cardios', label: 'Cardios', icon: Timer },
@@ -262,8 +265,8 @@ export default function App() {
       {/* Sidebar Desktop */}
       <nav className="fixed left-0 top-0 bottom-0 w-64 p-6 hidden lg:flex flex-col border-r border-zinc-800/50 bg-black/20 backdrop-blur-3xl z-50">
         <div className="flex items-center gap-3 mb-12">
-          <div className={cn("p-2 rounded-xl", bgAccentClass + "/10")}>
-            <Heart className={cn(accentClass)} />
+          <div className={cn("p-2.5 rounded-xl flex items-center justify-center", bgAccentClass + "/10")}>
+            <Heart className={cn(accentClass)} size={24} />
           </div>
           <h1 className="text-3xl font-black tracking-tighter font-display">YeeFit</h1>
         </div>
@@ -334,6 +337,7 @@ export default function App() {
             className="p-4 lg:p-12 max-w-6xl mx-auto"
           >
             {activeTab === 'dieta' && <Diet profile={profile} user={user} />}
+            {activeTab === 'diario' && <Diary profile={profile} user={user} />}
             {activeTab === 'treinos' && <Workouts profile={profile} user={user} />}
             {activeTab === 'suplementos' && <Supplements profile={profile} user={user} />}
             {activeTab === 'cardios' && <Cardios profile={profile} user={user} />}

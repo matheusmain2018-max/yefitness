@@ -9,8 +9,12 @@
         "name": { "type": "string" },
         "weight": { "type": "number" },
         "height": { "type": "number" },
+        "age": { "type": "number" },
+        "gender": { "type": "string", "enum": ["male", "female"] },
+        "goal": { "type": "string", "enum": ["lose", "maintain", "gain"] },
+        "activityLevel": { "type": "string", "enum": ["sedentary", "light", "moderate", "active", "very_active"] },
         "healthIssues": { "type": "string" },
-        "theme": { "type": "string", "enum": ["dark", "light", "gym-neon", "sunset"] },
+        "theme": { "type": "string", "enum": ["dark", "light", "gym-neon", "sunset", "neon-blue", "neon-red", "neon-purple", "neon-cyan"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "name"]
