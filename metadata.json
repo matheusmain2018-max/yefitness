@@ -5,9 +5,6 @@
     "camera"
   ],
   "majorCapabilities": [
-    "AI-powered Diet Analysis",
-    "Workout Tracking",
-    "Evolution Photo Comparison",
-    "Health Monitoring"
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }

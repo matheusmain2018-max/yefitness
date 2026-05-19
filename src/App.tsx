@@ -9,7 +9,7 @@ import {
   Settings as SettingsIcon,
   LogOut,
   User as UserIcon,
-  Heart,
+  Zap,
   BookOpen
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout, db } from './services/firebase';
@@ -196,11 +196,11 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <motion.div 
-          animate={{ scale: [1, 1.2, 1] }}
+          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 2, repeat: Infinity }}
           className={cn(accentClass, "p-4")}
         >
-          <Heart size={48} />
+          <Zap size={48} fill="currentColor" className="opacity-80" />
         </motion.div>
       </div>
     );
@@ -215,8 +215,8 @@ export default function App() {
           className="max-w-md w-full space-y-8 text-center"
         >
           <div className="flex justify-center mb-8">
-            <div className={cn("p-4 rounded-full", bgAccentClass + "/10")}>
-              <Heart className={cn("w-16 h-16", accentClass)} />
+            <div className={cn("p-6 rounded-3xl", bgAccentClass + "/10", "border border-" + accentClass.split('-')[1] + "-400/20")}>
+              <Zap className={cn("w-16 h-16", accentClass)} fill="currentColor" />
             </div>
           </div>
           <h1 className="text-6xl font-black tracking-tighter text-white">YeeFit</h1>
@@ -266,7 +266,7 @@ export default function App() {
       <nav className="fixed left-0 top-0 bottom-0 w-64 p-6 hidden lg:flex flex-col border-r border-zinc-800/50 bg-black/20 backdrop-blur-3xl z-50">
         <div className="flex items-center gap-3 mb-12">
           <div className={cn("p-2.5 rounded-xl flex items-center justify-center", bgAccentClass + "/10")}>
-            <Heart className={cn(accentClass)} size={24} />
+            <Zap className={cn(accentClass)} size={24} fill="currentColor" />
           </div>
           <h1 className="text-3xl font-black tracking-tighter font-display">YeeFit</h1>
         </div>
