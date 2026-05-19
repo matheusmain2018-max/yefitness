@@ -8,11 +8,24 @@ export async function analyzeMeal(mealDescription: string, healthIssues?: string
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Erro ao analisar refeição');
+    const text = await response.text();
+    let errorMsg = 'Erro ao analisar refeição';
+    try {
+      const errorData = JSON.parse(text);
+      errorMsg = errorData.error || errorMsg;
+    } catch {
+      errorMsg = `Erro do servidor (${response.status}): ${text.substring(0, 100)}`;
+    }
+    throw new Error(errorMsg);
   }
 
-  return response.json();
+  const resultText = await response.text();
+  try {
+    return JSON.parse(resultText);
+  } catch (err) {
+    console.error("Failed to parse AI response:", resultText);
+    throw new Error("Resposta da IA inválida. Tente novamente.");
+  }
 }
 
 export async function generateDailyReport(data: {
@@ -31,11 +44,24 @@ export async function generateDailyReport(data: {
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Erro ao gerar relatório');
+    const text = await response.text();
+    let errorMsg = 'Erro ao gerar relatório';
+    try {
+      const errorData = JSON.parse(text);
+      errorMsg = errorData.error || errorMsg;
+    } catch {
+      errorMsg = `Erro do servidor (${response.status}): ${text.substring(0, 100)}`;
+    }
+    throw new Error(errorMsg);
   }
 
-  return response.json();
+  const resultText = await response.text();
+  try {
+    return JSON.parse(resultText);
+  } catch (err) {
+    console.error("Failed to parse AI response:", resultText);
+    throw new Error("Resposta da IA inválida. Tente novamente.");
+  }
 }
 
 export async function analyzeEvolution(photos: { front?: string, back?: string, side?: string, biceps?: string }) {
@@ -46,9 +72,22 @@ export async function analyzeEvolution(photos: { front?: string, back?: string, 
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Erro ao analisar evolução');
+    const text = await response.text();
+    let errorMsg = 'Erro ao analisar evolução';
+    try {
+      const errorData = JSON.parse(text);
+      errorMsg = errorData.error || errorMsg;
+    } catch {
+      errorMsg = `Erro do servidor (${response.status}): ${text.substring(0, 100)}`;
+    }
+    throw new Error(errorMsg);
   }
 
-  return response.json();
+  const resultText = await response.text();
+  try {
+    return JSON.parse(resultText);
+  } catch (err) {
+    // For evolution, it might be plain text
+    return resultText;
+  }
 }
