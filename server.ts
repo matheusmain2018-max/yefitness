@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -12,7 +12,14 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+  const ai = new GoogleGenAI({ 
+    apiKey: process.env.GEMINI_API_KEY,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
 
   if (!process.env.GEMINI_API_KEY) {
     console.warn("⚠️ GEMINI_API_KEY não encontrada! As funcionalidades de IA não funcionarão.");
@@ -48,29 +55,27 @@ Retorne os macros e dois campos de texto curtos:
 1. 'aiComment': Um comentário motivador ou técnico sobre a qualidade nutricional.
 2. 'aiAdvice': Um aviso ou conselho específico SE houver algo relevante ao contexto de saúde (opcional).`;
 
-      const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        generationConfig: {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
           responseMimeType: "application/json",
           responseSchema: {
-            type: SchemaType.OBJECT,
+            type: Type.OBJECT,
             properties: {
-              calories: { type: SchemaType.NUMBER },
-              protein: { type: SchemaType.NUMBER },
-              carbs: { type: SchemaType.NUMBER },
-              fat: { type: SchemaType.NUMBER },
-              aiComment: { type: SchemaType.STRING },
-              aiAdvice: { type: SchemaType.STRING }
+              calories: { type: Type.NUMBER },
+              protein: { type: Type.NUMBER },
+              carbs: { type: Type.NUMBER },
+              fat: { type: Type.NUMBER },
+              aiComment: { type: Type.STRING },
+              aiAdvice: { type: Type.STRING }
             },
             required: ["calories", "protein", "carbs", "fat", "aiComment"]
           }
         }
       });
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
+      const text = response.text || "{}";
       console.log("AI Meal Response received:", text);
       res.json(JSON.parse(text));
     } catch (error: any) {
@@ -119,15 +124,13 @@ Retorne APENAS um JSON com esta estrutura:
 
 Seja crítico mas motivador. Considere o objetivo (${profile?.goal}) na pontuação.`;
 
-      const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        generationConfig: { responseMimeType: "application/json" }
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
       });
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
       
+      const text = response.text || "{}";
       res.json(JSON.parse(text));
     } catch (error: any) {
       console.error("AI Report Generation Error:", error);
@@ -163,13 +166,12 @@ Seja crítico mas motivador. Considere o objetivo (${profile?.goal}) na pontuaç
         return res.status(400).json({ error: "Por favor, adicione pelo menos uma foto para análise." });
       }
 
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-      const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
-      const response = await result.response;
-      const text = response.text();
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: { parts }
+      });
       
-      res.json(text || "Sem análise disponível.");
+      res.json(response.text || "Sem análise disponível.");
     } catch (error: any) {
       console.error("AI Evolution Analysis Error:", error);
       res.status(500).json({ error: error.message || "Falha na análise de evolução. Verifique a API Key." });
