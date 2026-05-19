@@ -28,6 +28,7 @@ export default function Diet({ profile, user }: Props) {
 
   const [description, setDescription] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<Meal[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -54,24 +55,26 @@ export default function Diet({ profile, user }: Props) {
     if (!description.trim()) return;
 
     setIsAnalyzing(true);
+    setError(null);
     try {
       const analysis = await analyzeMeal(description, profile?.healthIssues);
       const meal: Omit<Meal, 'id'> = {
         userId: user.uid,
-        date: new Date().toISOString().split('T')[0],
+        date: selectedDate,
         description,
-        calories: analysis.calories,
-        protein: analysis.protein,
-        carbs: analysis.carbs,
-        fat: analysis.fat,
-        aiComment: analysis.aiComment,
-        aiAdvice: analysis.aiAdvice,
+        calories: analysis.calories || 0,
+        protein: analysis.protein || 0,
+        carbs: analysis.carbs || 0,
+        fat: analysis.fat || 0,
+        aiComment: analysis.aiComment || '',
+        aiAdvice: analysis.aiAdvice || '',
         timestamp: Timestamp.now()
       };
       await addDoc(collection(db, 'meals'), meal);
       setDescription('');
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Falha na IA. Verifique sua conexão ou tente novamente.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -194,6 +197,13 @@ export default function Diet({ profile, user }: Props) {
               {isAnalyzing ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} />}
             </button>
           </form>
+
+          {error && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-center text-red-400 text-sm">
+              <AlertTriangle size={18} />
+              <p>{error}</p>
+            </div>
+          )}
 
           {/* Dica do Perfil */}
           {(!profile?.weight || !profile?.height || !profile?.age) && (

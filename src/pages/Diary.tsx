@@ -29,6 +29,7 @@ export default function Diary({ profile, user }: Props) {
   const [cardios, setCardios] = useState<Cardio[]>([]);
   const [report, setReport] = useState<any | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const targets = useMemo(() => {
     if (!profile || !profile.weight || !profile.height || !profile.age || !profile.gender) {
@@ -93,6 +94,7 @@ export default function Diary({ profile, user }: Props) {
 
   const handleGenerateReport = async () => {
     setIsGenerating(true);
+    setError(null);
     try {
       const data = await generateDailyReport({
         profile,
@@ -104,8 +106,9 @@ export default function Diary({ profile, user }: Props) {
         targets
       });
       setReport(data);
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Erro ao gerar relatório. Tente novamente.');
     } finally {
       setIsGenerating(false);
     }
@@ -163,6 +166,13 @@ export default function Diary({ profile, user }: Props) {
           Gerar Relatório IA
         </button>
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-center text-red-400 text-sm mb-8">
+           <XCircle size={20} />
+           <p>{error}</p>
+        </div>
+      )}
 
       {report && (
         <motion.div 

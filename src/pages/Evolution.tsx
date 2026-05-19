@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Camera, Image as ImageIcon, History, Sparkles, Loader2, Plus, Ruler, ChevronRight, Trash2 } from 'lucide-react';
+import { Camera, Image as ImageIcon, History, Sparkles, Loader2, Plus, Ruler, ChevronRight, Trash2, CameraOff } from 'lucide-react';
 import { db } from '../services/firebase';
 import { collection, addDoc, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { analyzeEvolution } from '../services/gemini';
@@ -25,6 +25,7 @@ export default function Evolution({ profile, user }: Props) {
 
   const [history, setHistory] = useState<EvolutionRecord[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<EvolutionRecord['photos']>({});
@@ -69,6 +70,7 @@ export default function Evolution({ profile, user }: Props) {
     if (Object.keys(photos).length === 0) return;
     
     setIsAnalyzing(true);
+    setError(null);
     try {
       const analysis = await analyzeEvolution(photos);
       const record: Omit<EvolutionRecord, 'id'> = {
@@ -82,8 +84,9 @@ export default function Evolution({ profile, user }: Props) {
       setShowAdd(false);
       setPhotos({});
       setMeasurements({ chest: 0, waist: 0, biceps: 0, thigh: 0 });
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Erro na análise de fotos. Tente novamente.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -165,6 +168,13 @@ export default function Evolution({ profile, user }: Props) {
               <><Sparkles size={20} /> Salvar e Analisar Evolução</>
             )}
           </button>
+
+          {error && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-center text-red-400 text-sm">
+              <CameraOff size={18} />
+              <p>{error}</p>
+            </div>
+          )}
         </motion.div>
       )}
 
