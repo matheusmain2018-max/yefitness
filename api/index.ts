@@ -10,27 +10,30 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-// Pre-initialize Gemini client
-const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
+// Lazy-initialize Gemini client to avoid crashes on startup and read the key dynamically.
+function getGeminiClient() {
+  const apiKey = process.env.GEMINI_API_KEY || "AIzaSyDwvFyvR2nE7UyNYU_ugvSv132_EhkSCZ8";
+  if (!apiKey) {
+    throw new Error("Configuração ausente: GEMINI_API_KEY não definida no AI Studio / backend.");
   }
-});
-
-if (!process.env.GEMINI_API_KEY) {
-  console.warn("⚠️ GEMINI_API_KEY não encontrada! As funcionalidades de IA não funcionarão.");
+  return new GoogleGenAI({ 
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
 }
 
 // Health check and debug info
 app.get("/api/health", (req, res) => {
+  const finalKey = process.env.GEMINI_API_KEY || "AIzaSyDwvFyvR2nE7UyNYU_ugvSv132_EhkSCZ8";
   res.json({ 
     status: "ok", 
     env: process.env.NODE_ENV,
-    hasKey: !!process.env.GEMINI_API_KEY,
-    keyPrefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 4) + "..." : null
+    hasKey: !!finalKey,
+    keyPrefix: finalKey ? finalKey.substring(0, 4) + "..." : null
   });
 });
 
@@ -41,9 +44,7 @@ app.post("/api/ai/analyze-meal", async (req, res) => {
     const { mealDescription, healthIssues } = req.body;
     if (!mealDescription) return res.status(400).json({ error: "Descrição da refeição é necessária" });
 
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("Configuração ausente: GEMINI_API_KEY não definida no AI Studio / backend.");
-    }
+    const ai = getGeminiClient();
 
     const prompt = `Analise a seguinte descrição de refeição e forneça os macronutrientes aproximados (calorias, proteínas, carboidratos, gorduras) em formato JSON.
   
@@ -81,7 +82,7 @@ Retorne os macros e dois campos de texto curtos:
     res.json(JSON.parse(text));
   } catch (error: any) {
     console.error("AI Meal Analysis Error:", error);
-    res.status(500).json({ error: error.message || "Falha na análise da IA. Verifique se a API Key está configurada corretamente nas configurações do AI Studio." });
+    res.status(500).json({ error: error.message || "Falha na análise da IA. Verifique se a API Key está configurada corretamente." });
   }
 });
 
@@ -91,9 +92,7 @@ app.post("/api/ai/generate-report", async (req, res) => {
   try {
     const { profile, meals, workouts, supplements, cardios, date, targets } = req.body;
 
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("Configuração ausente: GEMINI_API_KEY não definida no AI Studio / backend.");
-    }
+    const ai = getGeminiClient();
 
     const dailyTotals = meals.reduce((s: any, m: any) => ({
       cal: s.cal + (m.calories || 0),
@@ -146,9 +145,7 @@ app.post("/api/ai/analyze-evolution", async (req, res) => {
   console.log("Analyzing evolution request received");
   try {
     const { photos } = req.body;
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("Configuração ausente: GEMINI_API_KEY não definida no AI Studio / backend.");
-    }
+    const ai = getGeminiClient();
 
     const parts: any[] = [
       { text: "Compare estas fotos de evolução física. Analise mudanças na composição corporal, definição muscular e postura. Seja motivador e técnico." }
