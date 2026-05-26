@@ -215,6 +215,43 @@ export default function Diary({ profile, user }: Props) {
                 <p className="text-zinc-300 text-sm leading-relaxed">{report.advice}</p>
               </div>
 
+              {/* Balanço Calórico & Gasto Energético */}
+              {report.caloricStatus && (
+                <div className="p-6 bg-black/60 rounded-3xl border border-white/5 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest opacity-50">Balanço do Dia</h4>
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide",
+                      report.caloricStatus === 'deficit' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                      report.caloricStatus === 'surplus' ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
+                      "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
+                    )}>
+                      {report.caloricStatus === 'deficit' ? 'Déficit Calórico' :
+                       report.caloricStatus === 'surplus' ? 'Superávit Calórico' : 'Neutro / Manutenção'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-white/5 rounded-2xl">
+                      <p className="text-[9px] text-zinc-500 uppercase font-bold">Gasto Direto + Basal</p>
+                      <p className="text-xl font-black text-white mt-1">
+                        ~{report.estimatedExpenditure || 0} <span className="text-[10px] font-normal text-zinc-500">kcal</span>
+                      </p>
+                    </div>
+                    <div className="p-4 bg-white/5 rounded-2xl">
+                      <p className="text-[9px] text-zinc-500 uppercase font-bold">Saldo Energético</p>
+                      <p className={cn(
+                        "text-xl font-black mt-1",
+                        report.caloricDifference < 0 ? "text-emerald-400" :
+                        report.caloricDifference > 0 ? "text-amber-500" : "text-zinc-400"
+                      )}>
+                        {report.caloricDifference > 0 ? `+${report.caloricDifference}` : report.caloricDifference || 0} <span className="text-[10px] font-normal text-zinc-500">kcal</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Gráfico de Erro (Visualização Simplificada de Macros vs Targets) */}
               <div className="p-6 bg-black/60 rounded-3xl border border-white/5 space-y-4">
                  <h4 className="text-[10px] font-black uppercase tracking-widest opacity-50">Equilíbrio Nutricional</h4>

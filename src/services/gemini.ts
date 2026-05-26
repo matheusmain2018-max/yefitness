@@ -64,6 +64,39 @@ export async function generateDailyReport(data: {
   }
 }
 
+export async function analyzeWorkouts(data: {
+  profile: UserProfile | null,
+  workouts: Workout[],
+  cardios: Cardio[],
+  date: string
+}) {
+  const response = await fetch('/api/ai/analyze-workouts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    let errorMsg = 'Erro ao analisar treinos';
+    try {
+      const errorData = JSON.parse(text);
+      errorMsg = errorData.error || errorMsg;
+    } catch {
+      errorMsg = `Erro do servidor (${response.status}): ${text.substring(0, 100)}`;
+    }
+    throw new Error(errorMsg);
+  }
+
+  const resultText = await response.text();
+  try {
+    return JSON.parse(resultText);
+  } catch (err) {
+    console.error("Failed to parse AI response:", resultText);
+    throw new Error("Resposta da IA inválida. Tente novamente.");
+  }
+}
+
 export async function analyzeEvolution(photos: { front?: string, back?: string, side?: string, biceps?: string }) {
   const response = await fetch('/api/ai/analyze-evolution', {
     method: 'POST',

@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Plus, Dumbbell, History, Search, Target, ChevronRight, Edit2, Trash2, Save, X } from 'lucide-react';
 import { db } from '../services/firebase';
-import { collection, addDoc, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { Workout, ExerciseEntry, UserProfile } from '../types';
+import { collection, addDoc, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
+import { Workout, ExerciseEntry, UserProfile, Cardio } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn, accentColors, bgAccents, shadowAccents, borderAccents, bgSoftAccents, hoverBorderAccents } from '../App';
+import { analyzeWorkouts } from '../services/gemini';
+import ReactMarkdown from 'react-markdown';
 
 interface Props {
   profile: UserProfile | null;
@@ -30,6 +32,13 @@ export default function Workouts({ profile, user }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // AI Workout analysis states
+  const [cardios, setCardios] = useState<Cardio[]>([]);
+  const [aiAnalysis, setAiAnalysis] = useState<any | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const today = format(new Date(), 'yyyy-MM-dd');
+
   useEffect(() => {
     if (!user) return;
     const q = query(
@@ -44,6 +53,66 @@ export default function Workouts({ profile, user }: Props) {
 
     return unsubscribe;
   }, [user]);
+
+  // Listen to Cardios to evaluate calories spent
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'cardios'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setCardios(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cardio)));
+    });
+    return unsubscribe;
+  }, [user]);
+
+  // Listen to Today's AI Workout Analysis doc
+  useEffect(() => {
+    if (!user) return;
+    const docRef = doc(db, 'trainingAnalyses', `${user.uid}_${today}`);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setAiAnalysis(docSnap.data());
+      } else {
+        setAiAnalysis(null);
+      }
+    });
+    return unsubscribe;
+  }, [user, today]);
+
+  const handleAnalyzeToday = async () => {
+    if (!user) return;
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+
+    const todayWorkouts = history.filter(w => w.date === today);
+    const todayCardios = cardios.filter(c => c.checks?.[today]);
+
+    if (todayWorkouts.length === 0 && todayCardios.length === 0) {
+      setAnalysisError("Você precisa registrar pelo menos um treino de musculação ou cardio concluído hoje para poder obter a análise!");
+      setIsAnalyzing(false);
+      return;
+    }
+
+    try {
+      const result = await analyzeWorkouts({
+        profile,
+        workouts: todayWorkouts,
+        cardios: todayCardios,
+        date: today
+      });
+
+      // Persist in child database
+      const docRef = doc(db, 'trainingAnalyses', `${user.uid}_${today}`);
+      await setDoc(docRef, {
+        ...result,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err: any) {
+      console.error(err);
+      setAnalysisError(err.message || 'Falha ao analisar treino pela IA. Tente novamente.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const addExercise = () => {
     if (!currentEx.name) return;
@@ -222,6 +291,131 @@ export default function Workouts({ profile, user }: Props) {
           )}
         </motion.div>
       )}
+
+      {/* YeeBot AI Training Coach Panel */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-zinc-900/60 border border-zinc-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-current opacity-[0.02] filter blur-3xl pointer-events-none rounded-full" />
+        
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", bgAccentClass + "/20", accentClass)}>
+                Treinador IA ✨
+              </span>
+              <span className="text-zinc-500 text-xs font-mono">• Hoje, {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}</span>
+            </div>
+            <h3 className="text-3xl font-black tracking-tight text-white">Análise do YeeBot Coach</h3>
+            <p className="text-sm text-zinc-400">Receba feedback técnico personalizado, nota do treino e estimativa de calorias gastas de hoje.</p>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              onClick={handleAnalyzeToday}
+              disabled={isAnalyzing}
+              className={cn(
+                "py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-50",
+                bgAccentClass, "text-black shadow-lg", shadowAccentClass
+              )}
+            >
+              {isAnalyzing ? (
+                <>Analisando...</>
+              ) : aiAnalysis ? (
+                <>Refazer Análise 🔄</>
+              ) : (
+                <>Analisar Atividades ✨</>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {analysisError && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm">
+            {analysisError}
+          </div>
+        )}
+
+        {aiAnalysis ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mt-4">
+            {/* Esquerda: Métricas Rápidas */}
+            <div className="space-y-4 lg:col-span-1">
+              {/* Calorias Totais */}
+              <div className="p-6 bg-black/40 rounded-3xl border border-zinc-800 flex flex-col justify-between h-36">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Gasto Calórico Estimado</h4>
+                  <p className="text-3xl font-black mt-2 text-white">
+                    ~{aiAnalysis.caloriesBurned} <span className="text-xs text-zinc-500">kcal gastas</span>
+                  </p>
+                </div>
+                <div className="flex justify-between text-[10px] text-zinc-400 font-mono pt-2 border-t border-zinc-800/50">
+                  <span>Força: {aiAnalysis.workoutCalories || 0} kcal</span>
+                  <span>Cardio: {aiAnalysis.cardioCalories || 0} kcal</span>
+                </div>
+              </div>
+
+              {/* Qualidade do Treino */}
+              <div className="p-6 bg-black/40 rounded-3xl border border-zinc-800 flex flex-col justify-between h-36">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Qualidade de Hoje</h4>
+                  <div className="flex items-end justify-between mt-2">
+                    <span className="text-3xl font-black text-white">{aiAnalysis.trainingScore || 80}%</span>
+                    <span className={cn("text-xs font-black px-2.5 py-1 rounded-md uppercase tracking-wider", 
+                      (aiAnalysis.trainingScore || 80) >= 80 ? "bg-green-500/10 text-green-400" :
+                      (aiAnalysis.trainingScore || 80) >= 50 ? "bg-yellow-500/10 text-yellow-400" : "bg-red-500/10 text-red-500"
+                    )}>
+                      {(aiAnalysis.trainingScore || 80) >= 80 ? 'Excelente' : (aiAnalysis.trainingScore || 80) >= 50 ? 'Regular' : 'Ajustar'}
+                    </span>
+                  </div>
+                </div>
+                {/* Visual score micro progress bar */}
+                <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div 
+                    className={cn("h-full", 
+                      (aiAnalysis.trainingScore || 80) >= 80 ? "bg-green-400" :
+                      (aiAnalysis.trainingScore || 80) >= 50 ? "bg-yellow-400" : "bg-red-400"
+                    )}
+                    style={{ width: `${aiAnalysis.trainingScore || 80}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Direita: Avaliação & Sugestões */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Avaliação em si */}
+              <div className="p-6 bg-black/40 rounded-3xl border border-zinc-800 space-y-4">
+                <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400">Avaliação Técnica do Treino</h4>
+                <div className="prose prose-invert max-w-none prose-p:text-zinc-300 prose-strong:text-white prose-p:leading-relaxed text-sm">
+                  <ReactMarkdown>{aiAnalysis.evaluation}</ReactMarkdown>
+                </div>
+              </div>
+
+              {/* Recomendações */}
+              {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
+                <div className="p-6 bg-black/20 rounded-3xl border border-zinc-800 space-y-3">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400">Dicas Práticas do YeeBot Coach</h4>
+                  <ul className="space-y-2">
+                    {aiAnalysis.recommendations.map((rec: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2.5 text-zinc-300 text-sm">
+                        <span className={cn("w-1.5 h-1.5 rounded-full mt-2 shrink-0", bgAccentClass)} />
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 bg-black/20 rounded-3xl border border-dashed border-zinc-800 text-center space-y-2 py-10 mt-4">
+            <p className="text-zinc-400 text-sm font-medium">Você possui {history.filter(w => w.date === today).length} treinos e {cardios.filter(c => c.checks?.[today]).length} cardios listados para hoje.</p>
+            <p className="text-zinc-500 text-xs">Instancie em "Analisar Atividades" para obter um diagnóstico e conferir quantas calorias foram gastas!</p>
+          </div>
+        )}
+      </motion.div>
 
       <div className="space-y-6">
         <div className="flex items-center gap-4">

@@ -12,9 +12,9 @@ app.use(express.json({ limit: "50mb" }));
 
 // Lazy-initialize Gemini client to avoid crashes on startup and read the key dynamically.
 function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY || "AIzaSyDwvFyvR2nE7UyNYU_ugvSv132_EhkSCZ8";
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error("Configuração ausente: GEMINI_API_KEY não definida no AI Studio / backend.");
+    throw new Error("Configuração ausente: A variável de ambiente GEMINI_API_KEY não foi configurada. Por favor, adicione-a no painel do Vercel ou nas configurações.");
   }
   return new GoogleGenAI({ 
     apiKey,
@@ -28,7 +28,7 @@ function getGeminiClient() {
 
 // Health check and debug info
 app.get("/api/health", (req, res) => {
-  const finalKey = process.env.GEMINI_API_KEY || "AIzaSyDwvFyvR2nE7UyNYU_ugvSv132_EhkSCZ8";
+  const finalKey = process.env.GEMINI_API_KEY;
   res.json({ 
     status: "ok", 
     env: process.env.NODE_ENV,
@@ -101,29 +101,44 @@ app.post("/api/ai/generate-report", async (req, res) => {
       fat: s.fat + (m.fat || 0)
     }), { cal: 0, pro: 0, carb: 0, fat: 0 });
 
-    const prompt = `Gere uma análise técnica e visual para o dia ${date}.
-  
-Contexto:
-- Objetivo: ${profile?.goal}
-- Metas Diárias: ${targets.calories}kcal (P:${targets.protein}g, C:${targets.carbs}g, F:${targets.fat}g)
-- Consumo Real: ${dailyTotals.cal}kcal (P:${Math.round(dailyTotals.pro)}g, C:${Math.round(dailyTotals.carb)}g, F:${Math.round(dailyTotals.fat)}g)
-- Atividade: ${workouts.length} treinos, ${cardios.filter((c: any) => c.checks?.[date]).length} cardios realizados.
-- Hábitos: ${supplements.filter((s: any) => s.checks?.[date]).length}/${supplements.length} suplementos.
+    const activeCardios = cardios.filter((c: any) => c.checks?.[date]);
 
-Retorne APENAS um JSON com esta estrutura:
+    const prompt = `Gere uma análise técnica, motivadora e visual para o dia ${date}.
+  
+Contexto do Usuário:
+- Objetivo: ${profile?.goal} (lose = perder gordura/reduzir peso, maintain = manutenção, gain = hipertrofia/ganho de massa)
+- Peso: ${profile?.weight}kg | Altura: ${profile?.height}cm | Idade: ${profile?.age}
+- Metas Diárias de Ingestão: ${targets.calories}kcal (P:${targets.protein}g, C:${targets.carbs}g, F:${targets.fat}g)
+- Consumo Alimentar Real: ${dailyTotals.cal}kcal (P:${Math.round(dailyTotals.pro)}g, C:${Math.round(dailyTotals.carb)}g, F:${Math.round(dailyTotals.fat)}g)
+
+Atividades do Dia:
+- Treinos Realizados: ${JSON.stringify(workouts, null, 2)}
+- Cardios Concluídos: ${JSON.stringify(activeCardios, null, 2)}
+- Hábitos: ${supplements.filter((s: any) => s.checks?.[date]).length}/${supplements.length} suplementos tomados.
+
+Sua tarefa:
+1. Estime as calorias gastas com as atividades físicas registradas (treinos de musculação e cardios concluídos). Estime as calorias da musculação com base em exercícios, séries, repetições, e cardios com base na duração (ex: aprox. 6-10 kcal por minuto).
+2. Determine se a pessoa se encontra em DÉFICIT CALÓRICO ou SURPLUS/SUPERÁVIT CALÓRICO para o dia de hoje, considerando sua Taxa Metabólica Basal Estimada + Atividades Físicas vs Consumo Alimentar Real.
+3. Elabore o relatório explicando se o estado calórico do usuário está alinhado com o Objetivo principal dele (por exemplo, se o objetivo é 'lose' e ele está em déficit, isso é positivo; se o objetivo é 'gain' e está em déficit, explique que precisa comer mais).
+4. No campo "analysis", use formatação rica em markdown com subtópicos claros para detalhar a Dieta, Treino (e cardios) e concluir se a pessoa está em Déficit Calórico ou Não e o quanto isso é bom para o Objetivo.
+
+Retorne APENAS um JSON com esta exata estrutura:
 {
-  "quickSummary": "Uma frase curta de impacto",
+  "quickSummary": "Uma frase curta de impacto resumindo o dia",
   "scores": {
     "diet": 0-100,
     "training": 0-100,
     "habits": 0-100
   },
-  "analysis": "Texto curto e organizado usando markdown para destacar pontos chave.",
-  "advice": "Sugestão específica para amanhã",
-  "status": "success" | "warning" | "danger" (baseado no desempenho geral)
+  "caloricStatus": "deficit" | "surplus" | "neutral",
+  "estimatedExpenditure": number (gasto total estimado do dia incluindo metabolismo basal + treinos),
+  "caloricDifference": number (diferença entre alimentos consumidos e gasto total do dia. Se for deficitário, negativo; se for superávit, positivo),
+  "analysis": "Texto em português estruturado em markdown concluindo sobre a dieta, listando o gasto calórico estimado das atividades, e fundamentando detalhadamente se a pessoa está em déficit calórico ou não, e o que melhorar.",
+  "advice": "Sugestão específica e direta para amanhã",
+  "status": "success" | "warning" | "danger" (baseado no desempenho geral contra o objetivo)
 }
 
-Seja crítico mas motivador. Considere o objetivo (${profile?.goal}) na pontuação.`;
+Seja crítico mas focado em resultados.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
@@ -137,6 +152,77 @@ Seja crítico mas motivador. Considere o objetivo (${profile?.goal}) na pontuaç
   } catch (error: any) {
     console.error("AI Report Generation Error:", error);
     res.status(500).json({ error: error.message || "Falha na geração do relatório. Verifique a API Key." });
+  }
+});
+
+// Endpoint: Analyze Workouts
+app.post("/api/ai/analyze-workouts", async (req, res) => {
+  console.log("Analyzing workouts request received");
+  try {
+    const { profile, workouts, cardios, date } = req.body;
+    const ai = getGeminiClient();
+
+    const prompt = `Analise a rotina de atividades físicas e cardios do usuário para o dia ${date}.
+       
+Contexto do Usuário:
+- Objetivo: ${profile?.goal} (lose = emagrecimento, maintain = manutenção, gain = hipertrofia)
+- Peso: ${profile?.weight} kg
+- Altura: ${profile?.height} cm
+- Idade: ${profile?.age} anos
+- Gênero: ${profile?.gender === "male" ? "Masculino" : "Feminino"}
+
+Treinos Realizados (Musculação/Força):
+${JSON.stringify(workouts, null, 2)}
+
+Cardios Concluídos:
+${JSON.stringify(cardios, null, 2)}
+
+Sua tarefa:
+1. Estime com base científica as calorias gastas apenas na Musculação (fortalecimento baseado em carga, séries, repetições, exercícios) e apenas nos Cardios (concluídos com base no tempo de duração).
+2. Forneça uma avaliação aprofundada se a seleção de exercícios, séries e repetições de hoje estão ótimos/adequados para o Objetivo do usuário ("Se o treino está bom").
+3. Forneça de 2 a 4 recomendações técnicas e conselhos práticos e rápidos para otimizar os resultados físico-mecânicos do treino ou cardio.
+4. Forneça um Score do Treino de 0-100.
+
+Retorne APENAS um JSON nesta estrutura:
+{
+  "caloriesBurned": number (soma de workoutCalories e cardioCalories),
+  "workoutCalories": number (estimativa apenas do treino de força),
+  "cardioCalories": number (estimativa apenas do cardio),
+  "trainingScore": number (nota de 0 a 100 para o treino de hoje),
+  "evaluation": "Texto estruturado em markdown em português analisando se o treino tá bom, intensidade, volume, carga e combinação de cardios",
+  "recommendations": ["Recomendação 1", "Recomendação 2"]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            caloriesBurned: { type: Type.NUMBER },
+            workoutCalories: { type: Type.NUMBER },
+            cardioCalories: { type: Type.NUMBER },
+            trainingScore: { type: Type.NUMBER },
+            evaluation: { type: Type.STRING },
+            recommendations: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            }
+          },
+          required: ["caloriesBurned", "workoutCalories", "cardioCalories", "trainingScore", "evaluation", "recommendations"]
+        }
+      }
+    });
+
+    let text = response.text || "{}";
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    console.log("AI Workout Response received:", text);
+    res.json(JSON.parse(text));
+  } catch (error: any) {
+    console.error("AI Workout Analysis Error:", error);
+    res.status(500).json({ error: error.message || "Falha na análise dos treinos. Verifique a API Key." });
   }
 });
 

@@ -110,6 +110,24 @@
         "aiAnalysis": { "type": "string" }
       },
       "required": ["userId", "date"]
+    },
+    "TrainingAnalysis": {
+      "title": "Training Analysis",
+      "description": "AI analysis of daily training and cardios",
+      "type": "object",
+      "properties": {
+        "caloriesBurned": { "type": "number" },
+        "workoutCalories": { "type": "number" },
+        "cardioCalories": { "type": "number" },
+        "trainingScore": { "type": "number" },
+        "evaluation": { "type": "string" },
+        "recommendations": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["caloriesBurned", "workoutCalories", "cardioCalories", "trainingScore", "evaluation", "recommendations"]
     }
   },
   "firestore": {
@@ -118,6 +136,7 @@
     "workouts": { "schema": "Workout", "description": "Exercise logs" },
     "supplements": { "schema": "Supplement", "description": "Supplement schedule" },
     "cardios": { "schema": "Cardio", "description": "Cardio schedule" },
-    "evolution": { "schema": "Evolution", "description": "Health evolution history" }
+    "evolution": { "schema": "Evolution", "description": "Health evolution history" },
+    "trainingAnalyses/{id}": { "schema": "TrainingAnalysis", "description": "AI daily workout logs analysis" }
   }
 }
