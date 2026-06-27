@@ -4,13 +4,13 @@ import {
   Utensils, 
   Dumbbell, 
   Pill, 
-  Timer, 
   TrendingUp, 
   Settings as SettingsIcon,
   LogOut,
   User as UserIcon,
   Zap,
-  BookOpen
+  BookOpen,
+  Apple
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout, db } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -24,9 +24,9 @@ import Diet from './pages/Diet';
 import Diary from './pages/Diary';
 import Workouts from './pages/Workouts';
 import Supplements from './pages/Supplements';
-import Cardios from './pages/Cardios';
 import Evolution from './pages/Evolution';
 import Settings from './pages/Settings';
+import LOUtrista from './pages/LOUtrista';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -219,7 +219,7 @@ export default function App() {
               <Zap className={cn("w-16 h-16", accentClass)} fill="currentColor" />
             </div>
           </div>
-          <h1 className="text-6xl font-black tracking-tighter text-white">YeeFit</h1>
+          <h1 className="text-6xl font-black tracking-tighter text-white">LOU FIT</h1>
           <p className="text-zinc-400 text-lg">O próximo nível da sua evolução física, alimentado por IA.</p>
           <button 
             onClick={loginWithGoogle}
@@ -235,10 +235,10 @@ export default function App() {
 
   const tabs = [
     { id: 'dieta', label: 'Dieta', icon: Utensils },
+    { id: 'loutrista', label: 'LOUtrista', icon: Apple },
     { id: 'diario', label: 'Diário', icon: BookOpen },
     { id: 'treinos', label: 'Treinos', icon: Dumbbell },
     { id: 'suplementos', label: 'Suplementos', icon: Pill },
-    { id: 'cardios', label: 'Cardios', icon: Timer },
     { id: 'evolução', label: 'Evolução', icon: TrendingUp },
     { id: 'config', label: 'Config', icon: SettingsIcon },
   ];
@@ -256,7 +256,7 @@ export default function App() {
 
       {/* Mobile Nav Top */}
       <header className="fixed top-0 left-0 right-0 z-50 p-4 lg:hidden flex justify-between items-center glassmorphism border-b bg-opacity-80">
-        <h1 className="text-2xl font-black tracking-tighter">YeeFit</h1>
+        <h1 className="text-2xl font-black tracking-tighter">LOU FIT</h1>
         <button onClick={logout} className="p-2 opacity-60 hover:opacity-100">
           <LogOut size={20} />
         </button>
@@ -268,7 +268,7 @@ export default function App() {
           <div className={cn("p-2.5 rounded-xl flex items-center justify-center", bgAccentClass + "/10")}>
             <Zap className={cn(accentClass)} size={24} fill="currentColor" />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter font-display">YeeFit</h1>
+          <h1 className="text-3xl font-black tracking-tighter font-display">LOU FIT</h1>
         </div>
 
         <div className="flex-1 space-y-1">
@@ -337,10 +337,10 @@ export default function App() {
             className="p-4 lg:p-12 max-w-6xl mx-auto"
           >
             {activeTab === 'dieta' && <Diet profile={profile} user={user} />}
+            {activeTab === 'loutrista' && <LOUtrista profile={profile} user={user} />}
             {activeTab === 'diario' && <Diary profile={profile} user={user} />}
             {activeTab === 'treinos' && <Workouts profile={profile} user={user} />}
             {activeTab === 'suplementos' && <Supplements profile={profile} user={user} />}
-            {activeTab === 'cardios' && <Cardios profile={profile} user={user} />}
             {activeTab === 'evolução' && <Evolution profile={profile} user={user} />}
             {activeTab === 'config' && <Settings profile={profile} user={user} />}
           </motion.section>

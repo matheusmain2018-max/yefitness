@@ -124,3 +124,31 @@ export async function analyzeEvolution(photos: { front?: string, back?: string, 
     return resultText;
   }
 }
+
+export async function sendLOUtristaMessage(messages: { role: 'user' | 'assistant'; content: string }[], profile: UserProfile | null) {
+  const response = await fetch('/api/ai/nutri-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, profile })
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    let errorMsg = 'Erro ao conversar com LOUtrista';
+    try {
+      const errorData = JSON.parse(text);
+      errorMsg = errorData.error || errorMsg;
+    } catch {
+      errorMsg = `Erro do servidor (${response.status}): ${text.substring(0, 100)}`;
+    }
+    throw new Error(errorMsg);
+  }
+
+  const resultText = await response.text();
+  try {
+    return JSON.parse(resultText);
+  } catch (err) {
+    console.error("Failed to parse LOUtrista response:", resultText);
+    throw new Error("Resposta inválida do LOUtrista. Tente novamente.");
+  }
+}

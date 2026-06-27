@@ -26,7 +26,7 @@ export default function Workouts({ profile, user }: Props) {
 
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [currentEx, setCurrentEx] = useState<ExerciseEntry>({ name: '', weight: 0, sets: 0, reps: 0 });
-  const [workoutType, setWorkoutType] = useState<'gym' | 'home'>('gym');
+  const [workoutType, setWorkoutType] = useState<'gym' | 'home' | 'cardio'>('gym');
   const [history, setHistory] = useState<Workout[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -83,8 +83,19 @@ export default function Workouts({ profile, user }: Props) {
     setIsAnalyzing(true);
     setAnalysisError(null);
 
-    const todayWorkouts = history.filter(w => w.date === today);
-    const todayCardios = cardios.filter(c => c.checks?.[today]);
+    const todayWorkouts = history.filter(w => w.date === today && w.type !== 'cardio');
+    const workoutCardiosMapped = history
+      .filter(w => w.date === today && w.type === 'cardio')
+      .flatMap(w => w.exercises.map(ex => ({
+        userId: user.uid,
+        name: ex.name,
+        duration: ex.duration || 0,
+        checks: { [today]: true }
+      })));
+    const todayCardios = [
+      ...cardios.filter(c => c.checks?.[today]),
+      ...workoutCardiosMapped
+    ];
 
     if (todayWorkouts.length === 0 && todayCardios.length === 0) {
       setAnalysisError("Você precisa registrar pelo menos um treino de musculação ou cardio concluído hoje para poder obter a análise!");
@@ -116,8 +127,8 @@ export default function Workouts({ profile, user }: Props) {
 
   const addExercise = () => {
     if (!currentEx.name) return;
-    setExercises([...exercises, currentEx]);
-    setCurrentEx({ name: '', weight: 0, sets: 0, reps: 0 });
+    setExercises([...exercises, { ...currentEx }]);
+    setCurrentEx({ name: '', weight: 0, sets: 0, reps: 0, duration: undefined, distance: undefined });
   };
 
   const removeExercise = (idx: number) => {
@@ -206,6 +217,10 @@ export default function Workouts({ profile, user }: Props) {
                 onClick={() => setWorkoutType('home')}
                 className={cn("px-6 py-2 rounded-xl font-bold transition-all", workoutType === 'home' ? cn(bgAccentClass, "text-black") : 'bg-black text-zinc-500')}
               >Em Casa</button>
+              <button 
+                onClick={() => setWorkoutType('cardio')}
+                className={cn("px-6 py-2 rounded-xl font-bold transition-all", workoutType === 'cardio' ? cn(bgAccentClass, "text-black") : 'bg-black text-zinc-500')}
+              >Cardio</button>
             </div>
             {editingId && (
               <span className={cn("text-xs font-black px-4 py-2 rounded-full uppercase tracking-widest", bgAccentClass + "/10", accentClass)}>
@@ -215,45 +230,83 @@ export default function Workouts({ profile, user }: Props) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-black/40 p-6 rounded-3xl border border-zinc-800">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Exercício</label>
-              <input 
-                type="text" 
-                value={currentEx.name}
-                onChange={e => setCurrentEx({...currentEx, name: e.target.value})}
-                placeholder="Ex: Supino Com Halter"
-                className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Carga (kg)</label>
-              <input 
-                type="number" 
-                value={currentEx.weight || ''}
-                onChange={e => setCurrentEx({...currentEx, weight: Number(e.target.value)})}
-                className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Séries</label>
-                <input 
-                  type="number" 
-                  value={currentEx.sets || ''}
-                  onChange={e => setCurrentEx({...currentEx, sets: Number(e.target.value)})}
-                  className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Reps</label>
-                <input 
-                  type="number" 
-                  value={currentEx.reps || ''}
-                  onChange={e => setCurrentEx({...currentEx, reps: Number(e.target.value)})}
-                  className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
-                />
-              </div>
-            </div>
+            {workoutType === 'cardio' ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Atividade</label>
+                  <input 
+                    type="text" 
+                    value={currentEx.name}
+                    onChange={e => setCurrentEx({...currentEx, name: e.target.value})}
+                    placeholder="Ex: Corrida na Esteira"
+                    className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Duração (minutos)</label>
+                  <input 
+                    type="number" 
+                    value={currentEx.duration || ''}
+                    onChange={e => setCurrentEx({...currentEx, duration: Number(e.target.value), weight: 0, sets: 1, reps: 1})}
+                    placeholder="Ex: 30"
+                    className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Distância (km - opcional)</label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={currentEx.distance || ''}
+                    onChange={e => setCurrentEx({...currentEx, distance: Number(e.target.value)})}
+                    placeholder="Ex: 5.2"
+                    className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Exercício</label>
+                  <input 
+                    type="text" 
+                    value={currentEx.name}
+                    onChange={e => setCurrentEx({...currentEx, name: e.target.value})}
+                    placeholder="Ex: Supino Com Halter"
+                    className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Carga (kg)</label>
+                  <input 
+                    type="number" 
+                    value={currentEx.weight || ''}
+                    onChange={e => setCurrentEx({...currentEx, weight: Number(e.target.value)})}
+                    className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Séries</label>
+                    <input 
+                      type="number" 
+                      value={currentEx.sets || ''}
+                      onChange={e => setCurrentEx({...currentEx, sets: Number(e.target.value)})}
+                      className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-2">Reps</label>
+                    <input 
+                      type="number" 
+                      value={currentEx.reps || ''}
+                      onChange={e => setCurrentEx({...currentEx, reps: Number(e.target.value)})}
+                      className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 px-4 focus:outline-none", borderAccentClass)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
             <button 
               onClick={addExercise}
               className="bg-white text-black font-black py-3 rounded-xl hover:scale-105 active:scale-95 transition-all"
@@ -269,7 +322,11 @@ export default function Workouts({ profile, user }: Props) {
                   </div>
                   <div>
                     <h4 className="font-bold">{ex.name}</h4>
-                    <p className="text-zinc-500 text-xs">{ex.sets} séries x {ex.reps} reps • {ex.weight}kg</p>
+                    {ex.duration ? (
+                      <p className="text-zinc-500 text-xs">{ex.duration} minutos {ex.distance ? `• ${ex.distance} km` : ''}</p>
+                    ) : (
+                      <p className="text-zinc-500 text-xs">{ex.sets} séries x {ex.reps} reps • {ex.weight}kg</p>
+                    )}
                   </div>
                 </div>
                 <button onClick={() => removeExercise(i)} className="text-zinc-500 hover:text-red-400 transition-colors">Remover</button>
@@ -292,7 +349,7 @@ export default function Workouts({ profile, user }: Props) {
         </motion.div>
       )}
 
-      {/* YeeBot AI Training Coach Panel */}
+      {/* LOUZADA COACH AI Training Coach Panel */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -308,7 +365,7 @@ export default function Workouts({ profile, user }: Props) {
               </span>
               <span className="text-zinc-500 text-xs font-mono">• Hoje, {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}</span>
             </div>
-            <h3 className="text-3xl font-black tracking-tight text-white">Análise do YeeBot Coach</h3>
+            <h3 className="text-3xl font-black tracking-tight text-white">Análise do LOUZADA COACH</h3>
             <p className="text-sm text-zinc-400">Receba feedback técnico personalizado, nota do treino e estimativa de calorias gastas de hoje.</p>
           </div>
 
@@ -396,7 +453,7 @@ export default function Workouts({ profile, user }: Props) {
               {/* Recomendações */}
               {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
                 <div className="p-6 bg-black/20 rounded-3xl border border-zinc-800 space-y-3">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400">Dicas Práticas do YeeBot Coach</h4>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400">Dicas Práticas do LOUZADA COACH</h4>
                   <ul className="space-y-2">
                     {aiAnalysis.recommendations.map((rec: string, i: number) => (
                       <li key={i} className="flex items-start gap-2.5 text-zinc-300 text-sm">
@@ -411,8 +468,8 @@ export default function Workouts({ profile, user }: Props) {
           </div>
         ) : (
           <div className="p-6 bg-black/20 rounded-3xl border border-dashed border-zinc-800 text-center space-y-2 py-10 mt-4">
-            <p className="text-zinc-400 text-sm font-medium">Você possui {history.filter(w => w.date === today).length} treinos e {cardios.filter(c => c.checks?.[today]).length} cardios listados para hoje.</p>
-            <p className="text-zinc-500 text-xs">Instancie em "Analisar Atividades" para obter um diagnóstico e conferir quantas calorias foram gastas!</p>
+            <p className="text-zinc-400 text-sm font-medium">Você possui {history.filter(w => w.date === today && w.type !== 'cardio').length} treinos de força e {history.filter(w => w.date === today && w.type === 'cardio').flatMap(w => w.exercises).length + cardios.filter(c => c.checks?.[today]).length} cardios listados para hoje.</p>
+            <p className="text-zinc-500 text-xs">Instancia em "Analisar Atividades" para obter um diagnóstico e conferir quantas calorias foram gastas!</p>
           </div>
         )}
       </motion.div>
@@ -442,7 +499,7 @@ export default function Workouts({ profile, user }: Props) {
                     {format(new Date(workout.date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
                   </p>
                   <p className={cn("text-xs font-black uppercase tracking-widest mt-1", accentClass)}>
-                    Treino de {workout.type === 'gym' ? 'Academia' : 'Casa'}
+                    {workout.type === 'gym' ? 'Treino de Academia' : workout.type === 'home' ? 'Treino em Casa' : 'Cardio'}
                   </p>
                 </div>
                 <div className="flex gap-2 lg:opacity-0 group-hover:opacity-100 transition-opacity z-50">
@@ -500,7 +557,11 @@ export default function Workouts({ profile, user }: Props) {
                 {workout.exercises.map((ex, i) => (
                   <div key={i} className="flex justify-between items-center text-sm py-2 border-b border-zinc-800/50 last:border-0">
                     <span className="font-bold">{ex.name}</span>
-                    <span className="text-zinc-500 font-mono tracking-tighter">{ex.sets}x{ex.reps} @ {ex.weight}kg</span>
+                    {ex.duration ? (
+                      <span className="text-zinc-500 font-mono tracking-tighter">{ex.duration} min {ex.distance ? `• ${ex.distance} km` : ''}</span>
+                    ) : (
+                      <span className="text-zinc-500 font-mono tracking-tighter">{ex.sets}x{ex.reps} @ {ex.weight}kg</span>
+                    )}
                   </div>
                 ))}
               </div>

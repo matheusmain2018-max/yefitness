@@ -26,6 +26,29 @@ function getGeminiClient() {
   });
 }
 
+// Utility to handle Gemini model requests with an automatic fallback in case of high-demand / 503 errors
+async function generateContentWithFallback(ai: any, params: { model: string; contents: any; config?: any }) {
+  try {
+    return await ai.models.generateContent(params);
+  } catch (error: any) {
+    console.warn(`Primary model ${params.model} failed. Error:`, error.message || error);
+    // If it's a 503, high demand, UNAVAILABLE, or standard error on gemini-3.5-flash, fallback to gemini-3.1-flash-lite
+    if (params.model === "gemini-3.5-flash") {
+      console.info("Attempting automatic fallback to gemini-3.1-flash-lite...");
+      try {
+        return await ai.models.generateContent({
+          ...params,
+          model: "gemini-3.1-flash-lite"
+        });
+      } catch (fallbackError: any) {
+        console.error("Fallback to gemini-3.1-flash-lite also failed:", fallbackError.message || fallbackError);
+        throw error; // throw the original error to keep error detail clear
+      }
+    }
+    throw error;
+  }
+}
+
 // Health check and debug info
 app.get("/api/health", (req, res) => {
   const finalKey = process.env.GEMINI_API_KEY;
@@ -55,7 +78,7 @@ Retorne os macros e dois campos de texto curtos:
 1. 'aiComment': Um comentário motivador ou técnico sobre a qualidade nutricional.
 2. 'aiAdvice': Um aviso ou conselho específico SE houver algo relevante ao contexto de saúde (opcional).`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithFallback(ai, {
       model: "gemini-3.5-flash",
       contents: prompt,
       config: {
@@ -140,7 +163,7 @@ Retorne APENAS um JSON com esta exata estrutura:
 
 Seja crítico mas focado em resultados.`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithFallback(ai, {
       model: "gemini-3.5-flash",
       contents: prompt,
       config: { responseMimeType: "application/json" }
@@ -193,7 +216,7 @@ Retorne APENAS um JSON nesta estrutura:
   "recommendations": ["Recomendação 1", "Recomendação 2"]
 }`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithFallback(ai, {
       model: "gemini-3.5-flash",
       contents: prompt,
       config: {
@@ -253,7 +276,7 @@ app.post("/api/ai/analyze-evolution", async (req, res) => {
       return res.status(400).json({ error: "Por favor, adicione pelo menos uma foto para análise." });
     }
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithFallback(ai, {
       model: "gemini-3.5-flash",
       contents: { parts }
     });
@@ -262,6 +285,141 @@ app.post("/api/ai/analyze-evolution", async (req, res) => {
   } catch (error: any) {
     console.error("AI Evolution Analysis Error:", error);
     res.status(500).json({ error: error.message || "Falha na análise de evolução. Verifique a API Key." });
+  }
+});
+
+// Endpoint: LOUtrista Chatbot
+app.post("/api/ai/nutri-chat", async (req, res) => {
+  console.log("LOUtrista chat request received");
+  try {
+    const { messages, profile } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "O histórico de mensagens é obrigatório e deve ser uma lista." });
+    }
+
+    const ai = getGeminiClient();
+
+    // Map incoming message list to standard Gemini chat format
+    const contents = messages.map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const systemInstruction = `Você é o LOUtrista, o nutricionista oficial de inteligência artificial do LOUZADA COACH.
+Você é um profissional focado em resultados, técnico, extremamente motivador e compreensivo. Seu objetivo é ajudar o usuário com nutrição, dietas, substituições saudáveis e dicas práticas de alimentação de alta performance.
+
+Contexto do Usuário:
+- Nome: ${profile?.name || "Usuário"}
+- Peso: ${profile?.weight ? profile.weight + " kg" : "Não informado"}
+- Altura: ${profile?.height ? profile.height + " cm" : "Não informado"}
+- Idade: ${profile?.age ? profile.age + " anos" : "Não informado"}
+- Gênero: ${profile?.gender === "male" ? "Masculino" : profile?.gender === "female" ? "Feminino" : "Não informado"}
+- Objetivo: ${profile?.goal === "lose" ? "Perder peso/gordura" : profile?.goal === "maintain" ? "Manutenção de peso" : profile?.goal === "gain" ? "Hipertrofia/Ganho de massa muscular" : "Não informado"}
+- Limitações/Problemas de saúde: ${profile?.healthIssues || "Nenhum informado"}
+
+Regra de Ouro:
+Além de responder conversacionalmente através do campo 'content' (usando português do Brasil e markdown amigável), você DEVE decidir se a solicitação do usuário pode ser representada visualmente por um painel especializado de alta utilidade. Se puder, selecione o tipo de painel correspondente e preencha o objeto 'panel' detalhadamente. Se a pergunta for apenas um papo furado, uma dúvida geral simples ou apenas cortesia, deixe o campo 'panel' como nulo (ou não envie).
+
+Tipos de Painel ('panel.type'):
+1. 'diet' -> Quando o usuário solicitar uma estrutura ou planejamento de dieta completo para o dia. Preencha 'dietPlan' com calorias totais, macros e a lista de refeições sugeridas detalhadamente.
+2. 'food_swap' -> Quando o usuário perguntar sobre trocas saudáveis (ex: o que comer no lugar de pão, chocolate, etc.). Preencha a lista 'swaps'.
+3. 'macros' -> Quando o usuário quiser saber o cálculo ou distribuição de macronutrientes recomendados para o perfil dele. Preencha 'macros'.
+4. 'tips' -> Para dicas de receitas saudáveis, listas de compras, conselhos pré/pós-treino ou listas informativas gerais. Preencha 'items'.
+5. 'general' -> Para qualquer outro tipo de lista estruturada de informações ou metas que fique melhor representada visualmente do que apenas em texto corrido. Preencha 'items'.`;
+
+    const response = await generateContentWithFallback(ai, {
+      model: "gemini-3.5-flash",
+      contents,
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            content: { type: Type.STRING },
+            panel: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING },
+                title: { type: Type.STRING },
+                subtitle: { type: Type.STRING },
+                dietPlan: {
+                  type: Type.OBJECT,
+                  properties: {
+                    dailyCalories: { type: Type.NUMBER },
+                    dailyProtein: { type: Type.NUMBER },
+                    dailyCarbs: { type: Type.NUMBER },
+                    dailyFat: { type: Type.NUMBER },
+                    meals: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          name: { type: Type.STRING },
+                          time: { type: Type.STRING },
+                          foods: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING }
+                          },
+                          calories: { type: Type.NUMBER },
+                          protein: { type: Type.NUMBER }
+                        },
+                        required: ["name", "foods"]
+                      }
+                    }
+                  },
+                  required: ["dailyCalories", "dailyProtein", "dailyCarbs", "dailyFat", "meals"]
+                },
+                swaps: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      original: { type: Type.STRING },
+                      replacement: { type: Type.STRING },
+                      reason: { type: Type.STRING },
+                      benefit: { type: Type.STRING }
+                    },
+                    required: ["original", "replacement", "reason", "benefit"]
+                  }
+                },
+                macros: {
+                  type: Type.OBJECT,
+                  properties: {
+                    calories: { type: Type.NUMBER },
+                    protein: { type: Type.NUMBER },
+                    carbs: { type: Type.NUMBER },
+                    fat: { type: Type.NUMBER },
+                    notes: { type: Type.STRING }
+                  },
+                  required: ["calories", "protein", "carbs", "fat"]
+                },
+                items: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING },
+                      description: { type: Type.STRING }
+                    },
+                    required: ["title", "description"]
+                  }
+                }
+              },
+              required: ["type", "title"]
+            }
+          },
+          required: ["content"]
+        }
+      }
+    });
+
+    let text = response.text || "{}";
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    res.json(JSON.parse(text));
+  } catch (error: any) {
+    console.error("LOUtrista Chat Error:", error);
+    res.status(500).json({ error: error.message || "Falha ao processar com LOUtrista." });
   }
 });
 

@@ -96,12 +96,21 @@ export default function Diary({ profile, user }: Props) {
     setIsGenerating(true);
     setError(null);
     try {
+      const mappedCardios = [
+        ...cardios,
+        ...workouts.filter(w => w.type === 'cardio').flatMap(w => w.exercises.map(ex => ({
+          userId: user.uid,
+          name: ex.name,
+          duration: ex.duration || 0,
+          checks: { [selectedDate]: true }
+        } as Cardio)))
+      ];
       const data = await generateDailyReport({
         profile,
         meals,
-        workouts,
+        workouts: workouts.filter(w => w.type !== 'cardio'),
         supplements,
-        cardios,
+        cardios: mappedCardios,
         date: selectedDate,
         targets
       });
@@ -189,7 +198,7 @@ export default function Diary({ profile, user }: Props) {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Sparkles className={accentClass} size={20} />
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] opacity-60 text-white">Análise do YeeBot</h3>
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] opacity-60 text-white">Análise do LOUZADA COACH</h3>
               </div>
               <h4 className="text-2xl font-black tracking-tight">{report.quickSummary}</h4>
             </div>
@@ -307,11 +316,18 @@ export default function Diary({ profile, user }: Props) {
               {workouts.map(w => (
                 <div key={w.id} className="p-4 bg-black/20 rounded-xl border border-white/5 flex gap-4">
                    <div className={cn("p-2 rounded-lg text-black", bgAccentClass)}>
-                      <Dumbbell size={16} />
+                      {w.type === 'cardio' ? <Timer size={16} /> : <Dumbbell size={16} />}
                    </div>
                    <div>
-                      <p className="text-sm font-bold capitalize">Treino {w.type === 'gym' ? 'na Academia' : 'em Casa'}</p>
-                      <p className="text-[10px] text-zinc-500">{w.exercises.length} exercícios realizados</p>
+                      <p className="text-sm font-bold capitalize">
+                        {w.type === 'gym' ? 'Treino na Academia' : w.type === 'home' ? 'Treino em Casa' : 'Cardio Concluído'}
+                      </p>
+                      <p className="text-[10px] text-zinc-500">
+                        {w.type === 'cardio' 
+                          ? `${w.exercises.map(ex => `${ex.name} (${ex.duration} min)`).join(', ')}`
+                          : `${w.exercises.length} exercícios realizados`
+                        }
+                      </p>
                    </div>
                 </div>
               ))}

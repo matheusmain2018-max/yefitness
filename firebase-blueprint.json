@@ -128,10 +128,24 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["caloriesBurned", "workoutCalories", "cardioCalories", "trainingScore", "evaluation", "recommendations"]
+    },
+    "NutriMessage": {
+      "title": "Nutri Message",
+      "description": "Messages exchanged with LOUtrista nutrition coach",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "panel": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "role", "content"]
     }
   },
   "firestore": {
     "users/{userId}": { "schema": "User", "description": "Individual user settings" },
+    "users/{userId}/nutri_messages/{messageId}": { "schema": "NutriMessage", "description": "Chat messages with LOUtrista coach" },
     "meals": { "schema": "Meal", "description": "Food logs" },
     "workouts": { "schema": "Workout", "description": "Exercise logs" },
     "supplements": { "schema": "Supplement", "description": "Supplement schedule" },

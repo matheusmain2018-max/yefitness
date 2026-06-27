@@ -30,6 +30,8 @@ export interface ExerciseEntry {
   weight: number;
   sets: number;
   reps: number;
+  duration?: number;
+  distance?: number;
 }
 
 export interface Workout {
@@ -37,7 +39,7 @@ export interface Workout {
   userId: string;
   date: string;
   exercises: ExerciseEntry[];
-  type: 'home' | 'gym';
+  type: 'home' | 'gym' | 'cardio';
 }
 
 export interface Supplement {
@@ -74,3 +76,49 @@ export interface EvolutionRecord {
   };
   aiAnalysis?: string;
 }
+
+export interface NutriPanel {
+  type: 'diet' | 'food_swap' | 'macros' | 'tips' | 'general';
+  title: string;
+  subtitle?: string;
+  dietPlan?: {
+    dailyCalories: number;
+    dailyProtein: number;
+    dailyCarbs: number;
+    dailyFat: number;
+    meals: {
+      name: string;
+      time?: string;
+      foods: string[];
+      calories?: number;
+      protein?: number;
+    }[];
+  };
+  swaps?: {
+    original: string;
+    replacement: string;
+    reason: string;
+    benefit: string;
+  }[];
+  macros?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    notes?: string;
+  };
+  items?: {
+    title: string;
+    description: string;
+  }[];
+}
+
+export interface NutriMessage {
+  id?: string;
+  userId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  panel?: NutriPanel | null;
+  timestamp: any;
+}
+
