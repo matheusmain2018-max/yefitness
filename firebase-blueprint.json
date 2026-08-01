@@ -141,11 +141,39 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "role", "content"]
+    },
+    "CustomDietPlan": {
+      "title": "Custom Diet Plan",
+      "description": "User created custom meal plan",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "meals": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "meals"]
+    },
+    "CustomDietDayLog": {
+      "title": "Custom Diet Day Log",
+      "description": "Daily checklist and free text macro calculations",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "checkedItemIds": { "type": "array" },
+        "freeTextReport": { "type": "string" },
+        "aiCalculatedMacros": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "date"]
     }
   },
   "firestore": {
     "users/{userId}": { "schema": "User", "description": "Individual user settings" },
     "users/{userId}/nutri_messages/{messageId}": { "schema": "NutriMessage", "description": "Chat messages with LOUtrista coach" },
+    "users/{userId}/custom_diet_plan/{planId}": { "schema": "CustomDietPlan", "description": "User custom meal plan" },
+    "users/{userId}/custom_diet_days/{dayId}": { "schema": "CustomDietDayLog", "description": "Daily checklist and macro log" },
     "meals": { "schema": "Meal", "description": "Food logs" },
     "workouts": { "schema": "Workout", "description": "Exercise logs" },
     "supplements": { "schema": "Supplement", "description": "Supplement schedule" },

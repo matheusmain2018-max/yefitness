@@ -122,3 +122,53 @@ export interface NutriMessage {
   timestamp: any;
 }
 
+export interface CustomDietFoodItem {
+  id: string;
+  name: string;
+  quantity?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+}
+
+export interface CustomDietMeal {
+  id: string;
+  name: string;
+  time?: string;
+  items: CustomDietFoodItem[];
+}
+
+export interface CustomDietPlan {
+  id?: string;
+  userId: string;
+  title: string;
+  meals: CustomDietMeal[];
+  updatedAt?: any;
+}
+
+export interface CustomDietDayLog {
+  id?: string;
+  userId: string;
+  date: string; // YYYY-MM-DD format
+  checkedItemIds: string[]; // Lista de IDs de itens marcados no checklist do dia
+  freeTextReport?: string; // Relato livre do dia (o que o usuário comeu no dia)
+  aiCalculatedMacros?: {
+    totalCalories: number;
+    totalProtein: number;
+    totalCarbs: number;
+    totalFat: number;
+    evaluation: string;
+    tips?: string[];
+    breakdown?: {
+      name: string;
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+    }[];
+  } | null;
+  updatedAt?: any;
+}
+
+

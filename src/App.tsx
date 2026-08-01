@@ -10,7 +10,8 @@ import {
   User as UserIcon,
   Zap,
   BookOpen,
-  Apple
+  Apple,
+  CheckSquare
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout, db } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -21,6 +22,7 @@ import { twMerge } from 'tailwind-merge';
 
 // Pages
 import Diet from './pages/Diet';
+import CustomDiet from './pages/CustomDiet';
 import Diary from './pages/Diary';
 import Workouts from './pages/Workouts';
 import Supplements from './pages/Supplements';
@@ -156,7 +158,7 @@ export const atmosphereColors = {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState('dieta');
+  const [activeTab, setActiveTab] = useState('custom_diet');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -234,7 +236,8 @@ export default function App() {
   }
 
   const tabs = [
-    { id: 'dieta', label: 'Dieta', icon: Utensils },
+    { id: 'custom_diet', label: 'Minha Dieta', icon: CheckSquare },
+    { id: 'dieta', label: 'Plano IA', icon: Utensils },
     { id: 'loutrista', label: 'LOUtrista', icon: Apple },
     { id: 'diario', label: 'Diário', icon: BookOpen },
     { id: 'treinos', label: 'Treinos', icon: Dumbbell },
@@ -336,6 +339,7 @@ export default function App() {
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="p-4 lg:p-12 max-w-6xl mx-auto"
           >
+            {activeTab === 'custom_diet' && <CustomDiet profile={profile} user={user} />}
             {activeTab === 'dieta' && <Diet profile={profile} user={user} />}
             {activeTab === 'loutrista' && <LOUtrista profile={profile} user={user} />}
             {activeTab === 'diario' && <Diary profile={profile} user={user} />}

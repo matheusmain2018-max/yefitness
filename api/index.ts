@@ -423,4 +423,72 @@ Tipos de Painel ('panel.type'):
   }
 });
 
+// Endpoint: Calcular Macros do Dia ou de Itens com IA
+app.post("/api/ai/calculate-day-macros", async (req, res) => {
+  console.log("Calculate day macros request received");
+  try {
+    const { textReport, items, profile } = req.body;
+    if (!textReport && (!items || items.length === 0)) {
+      return res.status(400).json({ error: "Forneça o texto do relato do dia ou uma lista de alimentos." });
+    }
+
+    const ai = getGeminiClient();
+
+    const systemInstruction = `Você é um nutricionista especialista em cálculo de macronutrientes do LOUZADA COACH.
+Seu objetivo é analisar o relato de alimentação de um dia (ou uma lista de alimentos/refeições) e estimar com precisão os macronutrientes totais e de cada item/refeição informada.
+Perfil do Usuário:
+- Peso: ${profile?.weight ? profile.weight + " kg" : "Não informado"}
+- Objetivo: ${profile?.goal === "lose" ? "Perder peso/gordura" : profile?.goal === "gain" ? "Hipertrofia" : "Manter peso"}`;
+
+    const promptText = textReport
+      ? `Calcule os macronutrientes do seguinte relato do que o usuário comeu no dia:\n"${textReport}"\nEstime as calorias, proteínas (g), carboidratos (g) e gorduras (g) totais, e forneça o detalhamento de cada refeição/alimento mencionado, um breve parecer ('evaluation') e dicas ('tips').`
+      : `Calcule os macronutrientes estimados para a seguinte lista de itens/alimentos: ${JSON.stringify(items)}\nEstime calorias, proteínas (g), carboidratos (g) e gorduras (g) totais e de cada item.`;
+
+    const response = await generateContentWithFallback(ai, {
+      model: "gemini-3.5-flash",
+      contents: promptText,
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            totalCalories: { type: Type.NUMBER },
+            totalProtein: { type: Type.NUMBER },
+            totalCarbs: { type: Type.NUMBER },
+            totalFat: { type: Type.NUMBER },
+            evaluation: { type: Type.STRING },
+            tips: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            breakdown: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING },
+                  calories: { type: Type.NUMBER },
+                  protein: { type: Type.NUMBER },
+                  carbs: { type: Type.NUMBER },
+                  fat: { type: Type.NUMBER }
+                },
+                required: ["name", "calories", "protein", "carbs", "fat"]
+              }
+            }
+          },
+          required: ["totalCalories", "totalProtein", "totalCarbs", "totalFat", "evaluation", "breakdown"]
+        }
+      }
+    });
+
+    let text = response.text || "{}";
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    res.json(JSON.parse(text));
+  } catch (error: any) {
+    console.error("Calculate day macros Error:", error);
+    res.status(500).json({ error: error.message || "Falha ao calcular macros com IA." });
+  }
+});
+
 export default app;
