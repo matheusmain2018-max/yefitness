@@ -12,7 +12,8 @@ import {
   BookOpen,
   Apple,
   CheckSquare,
-  Moon
+  Moon,
+  Salad
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout, db } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -31,6 +32,7 @@ import Supplements from './pages/Supplements';
 import Evolution from './pages/Evolution';
 import Settings from './pages/Settings';
 import LOUtrista from './pages/LOUtrista';
+import Foods from './pages/Foods';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -240,6 +242,7 @@ export default function App() {
   const tabs = [
     { id: 'custom_diet', label: 'Minha Dieta', icon: CheckSquare },
     { id: 'dieta', label: 'Plano IA', icon: Utensils },
+    { id: 'alimentos', label: 'Alimentos', icon: Salad },
     { id: 'loutrista', label: 'LOUtrista', icon: Apple },
     { id: 'diario', label: 'Diário', icon: BookOpen },
     { id: 'sono', label: 'Sono', icon: Moon },
@@ -344,6 +347,7 @@ export default function App() {
           >
             {activeTab === 'custom_diet' && <CustomDiet profile={profile} user={user} />}
             {activeTab === 'dieta' && <Diet profile={profile} user={user} />}
+            {activeTab === 'alimentos' && <Foods profile={profile} user={user} />}
             {activeTab === 'loutrista' && <LOUtrista profile={profile} user={user} />}
             {activeTab === 'diario' && <Diary profile={profile} user={user} />}
             {activeTab === 'sono' && <Sleep profile={profile} user={user} />}
