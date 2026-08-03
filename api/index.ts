@@ -491,4 +491,63 @@ Perfil do Usuário:
   }
 });
 
+app.post("/api/ai/analyze-sleep", async (req, res) => {
+  try {
+    const { bedtime, waketime, date, quality, notes, profile } = req.body;
+    const ai = getGeminiClient();
+
+    const systemInstruction = `
+      Você é um especialista em Fisiologia do Sono e Nutrição Esportiva.
+      Sua missão é analisar de forma muito curta, direta e sem textão o horário de dormir e acordar registrado pelo usuário no dia ${date || "hoje"}.
+      
+      HORÁRIO QUE DORMIU: ${bedtime}
+      HORÁRIO QUE ACORDOU: ${waketime}
+      QUALIDADE PERCEBIDA: ${quality || "não informada"}
+      OBSERVAÇÕES DO USUÁRIO: ${notes || "nenhuma"}
+      DADOS DO USUÁRIO:
+      - Objetivo: ${profile?.goal || "Evolução estética e performance"}
+      - Nível de atividade: ${profile?.activityLevel || "moderado/ativo"}
+
+      REGRA DE OURO: SEJA EXTREMAMENTE BREVE E PRÁTICO. NADA DE TEXTÃO.
+      1) summary: Resumo curto (máximo 2 frases curtas) sobre a noite de sono.
+      2) cortisolAnalysis: Explicação simples e direta (máximo 2 frases) de como o horário afetou o ritmo diário e a energia matinal (fazendo referência sutil ao cortisol e estresse, sem alarme).
+      3) hormoneImpact: Explicação simples (máximo 2 frases) sobre o impacto na recuperação muscular e descanso.
+      4) circadianScore: Nota de 0 a 100 realista para esse padrão de sono.
+      5) recommendations: 3 dicas curtas e práticas de 1 frase cada.
+
+      Retorne estritamente no formato JSON compatível com o schema definido.
+    `;
+
+    const response = await generateContentWithFallback(ai, {
+      model: "gemini-3.5-flash",
+      contents: `Análise de sono e cortisol para horário dormir: ${bedtime}, acordar: ${waketime}.`,
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            cortisolAnalysis: { type: Type.STRING },
+            hormoneImpact: { type: Type.STRING },
+            circadianScore: { type: Type.NUMBER },
+            recommendations: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            }
+          },
+          required: ["summary", "cortisolAnalysis", "hormoneImpact", "circadianScore", "recommendations"]
+        }
+      }
+    });
+
+    let text = response.text || "{}";
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    res.json(JSON.parse(text));
+  } catch (error: any) {
+    console.error("Analyze Sleep Error:", error);
+    res.status(500).json({ error: error.message || "Falha ao analisar sono com IA." });
+  }
+});
+
 export default app;

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Palette, Weight, Ruler, AlertCircle, Save, Target, Activity } from 'lucide-react';
+import { User, Weight, Ruler, AlertCircle, Save, Target, Activity } from 'lucide-react';
 import { db } from '../services/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { UserProfile } from '../types';
-import { cn, accentColors, bgAccents, shadowAccents, ringAccents, borderAccents } from '../App';
+import { cn, accentColors, bgAccents, shadowAccents, ringAccents } from '../App';
 
 interface Props {
   profile: UserProfile | null;
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function Settings({ profile, user }: Props) {
-  const themeKey = (profile?.theme || 'gym-neon') as keyof typeof accentColors;
+  const themeKey = (profile?.theme || 'neon-red') as keyof typeof accentColors;
   const accentClass = accentColors[themeKey];
   const bgAccentClass = bgAccents[themeKey];
   const shadowAccentClass = shadowAccents[themeKey];
@@ -26,7 +26,7 @@ export default function Settings({ profile, user }: Props) {
     goal: profile?.goal || 'maintain' as 'lose' | 'maintain' | 'gain',
     activityLevel: profile?.activityLevel || 'moderate' as 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active',
     healthIssues: profile?.healthIssues || '',
-    theme: profile?.theme || 'gym-neon'
+    theme: 'neon-red' as any
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -43,7 +43,7 @@ export default function Settings({ profile, user }: Props) {
         goal: profile.goal || 'maintain',
         activityLevel: profile.activityLevel || 'moderate',
         healthIssues: profile.healthIssues || '',
-        theme: profile.theme || 'gym-neon'
+        theme: 'neon-red'
       });
     }
   }, [profile?.uid]); // Update only when user changes or first load
@@ -68,7 +68,7 @@ export default function Settings({ profile, user }: Props) {
       goal: formData.goal,
       activityLevel: formData.activityLevel,
       healthIssues: formData.healthIssues || '',
-      theme: formData.theme || 'gym-neon'
+      theme: 'neon-red'
     };
 
     try {
@@ -83,17 +83,6 @@ export default function Settings({ profile, user }: Props) {
       setIsSaving(false);
     }
   };
-
-  const themeOptions = [
-    { id: 'gym-neon', label: 'Neon Lima', preview: 'bg-black border-lime-400' },
-    { id: 'neon-blue', label: 'Neon Azul', preview: 'bg-black border-blue-400' },
-    { id: 'neon-red', label: 'Neon Vermelho', preview: 'bg-black border-red-400' },
-    { id: 'neon-purple', label: 'Neon Roxo', preview: 'bg-black border-purple-400' },
-    { id: 'neon-cyan', label: 'Neon Ciano', preview: 'bg-black border-cyan-400' },
-    { id: 'dark', label: 'Eclipse Dark', preview: 'bg-zinc-950 border-zinc-700' },
-    { id: 'light', label: 'Clean White', preview: 'bg-white border-zinc-200' },
-    { id: 'sunset', label: 'Sunset Glow', preview: 'bg-orange-50 border-orange-200' },
-  ];
 
   return (
     <div className="space-y-12 max-w-2xl pb-20">
@@ -215,32 +204,6 @@ export default function Settings({ profile, user }: Props) {
               placeholder="Diabetes, Pressão Alta, Intolerâncias, Lesões..."
               className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-4 px-6 min-h-[100px] focus:outline-none focus:ring-2", ringAccentClass)}
             />
-          </div>
-        </section>
-
-        {/* Tema */}
-        <section className="space-y-6">
-          <div className={cn("flex items-center gap-2 font-black tracking-widest text-xs uppercase", accentClass)}>
-            <Palette size={16} /> Aparência & Tema
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {themeOptions.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setFormData({...formData, theme: opt.id as any})}
-                className={cn(
-                  "flex flex-col items-center gap-3 p-4 rounded-3xl border-2 transition-all",
-                  formData.theme === opt.id 
-                    ? cn("bg-black border-opacity-40", borderAccents[opt.id as keyof typeof borderAccents].replace('focus:', '')) 
-                    : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
-                )}
-              >
-                <div className={cn("w-12 h-12 rounded-full border-2 shadow-inner", opt.preview)} />
-                <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
-              </button>
-            ))}
           </div>
         </section>
 

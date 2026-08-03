@@ -11,7 +11,8 @@ import {
   Zap,
   BookOpen,
   Apple,
-  CheckSquare
+  CheckSquare,
+  Moon
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout, db } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -24,6 +25,7 @@ import { twMerge } from 'tailwind-merge';
 import Diet from './pages/Diet';
 import CustomDiet from './pages/CustomDiet';
 import Diary from './pages/Diary';
+import Sleep from './pages/Sleep';
 import Workouts from './pages/Workouts';
 import Supplements from './pages/Supplements';
 import Evolution from './pages/Evolution';
@@ -35,124 +37,124 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const themes = {
-  dark: 'bg-zinc-950 text-zinc-100 selection:bg-zinc-700',
-  light: 'bg-zinc-50 text-zinc-900 selection:bg-zinc-200',
-  'gym-neon': 'bg-[#020400] text-white selection:bg-lime-500/30 font-sans',
-  'neon-blue': 'bg-[#00040a] text-white selection:bg-blue-500/30 font-sans',
+  dark: 'bg-[#050000] text-white selection:bg-red-500/30 font-sans',
+  light: 'bg-[#050000] text-white selection:bg-red-500/30 font-sans',
+  'gym-neon': 'bg-[#050000] text-white selection:bg-red-500/30 font-sans',
+  'neon-blue': 'bg-[#050000] text-white selection:bg-red-500/30 font-sans',
   'neon-red': 'bg-[#050000] text-white selection:bg-red-500/30 font-sans',
-  'neon-purple': 'bg-[#040008] text-white selection:bg-purple-500/30 font-sans',
-  'neon-cyan': 'bg-[#000505] text-white selection:bg-cyan-500/30 font-sans',
-  sunset: 'bg-orange-50 text-orange-950 selection:bg-orange-200'
+  'neon-purple': 'bg-[#050000] text-white selection:bg-red-500/30 font-sans',
+  'neon-cyan': 'bg-[#050000] text-white selection:bg-red-500/30 font-sans',
+  sunset: 'bg-[#050000] text-white selection:bg-red-500/30 font-sans'
 };
 
 export const accentColors = {
-  dark: 'text-zinc-400',
-  light: 'text-zinc-500',
-  'gym-neon': 'text-lime-400',
-  'neon-blue': 'text-blue-400',
+  dark: 'text-red-400',
+  light: 'text-red-400',
+  'gym-neon': 'text-red-400',
+  'neon-blue': 'text-red-400',
   'neon-red': 'text-red-400',
-  'neon-purple': 'text-purple-400',
-  'neon-cyan': 'text-cyan-400',
-  sunset: 'text-orange-500'
+  'neon-purple': 'text-red-400',
+  'neon-cyan': 'text-red-400',
+  sunset: 'text-red-400'
 };
 
 export const bgAccents = {
-  dark: 'bg-zinc-800',
-  light: 'bg-zinc-200',
-  'gym-neon': 'bg-lime-400',
-  'neon-blue': 'bg-blue-400',
+  dark: 'bg-red-400',
+  light: 'bg-red-400',
+  'gym-neon': 'bg-red-400',
+  'neon-blue': 'bg-red-400',
   'neon-red': 'bg-red-400',
-  'neon-purple': 'bg-purple-400',
-  'neon-cyan': 'bg-cyan-400',
-  sunset: 'bg-orange-400'
+  'neon-purple': 'bg-red-400',
+  'neon-cyan': 'bg-red-400',
+  sunset: 'bg-red-400'
 };
 
 export const shadowAccents = {
-  dark: 'shadow-zinc-500/20',
-  light: 'shadow-zinc-500/20',
-  'gym-neon': 'shadow-lime-400/20',
-  'neon-blue': 'shadow-blue-400/20',
+  dark: 'shadow-red-400/20',
+  light: 'shadow-red-400/20',
+  'gym-neon': 'shadow-red-400/20',
+  'neon-blue': 'shadow-red-400/20',
   'neon-red': 'shadow-red-400/20',
-  'neon-purple': 'shadow-purple-400/20',
-  'neon-cyan': 'shadow-cyan-400/20',
-  sunset: 'shadow-orange-400/20'
+  'neon-purple': 'shadow-red-400/20',
+  'neon-cyan': 'shadow-red-400/20',
+  sunset: 'shadow-red-400/20'
 };
 
 export const borderAccents = {
-  dark: 'focus:border-zinc-500',
-  light: 'focus:border-zinc-400',
-  'gym-neon': 'focus:border-lime-400',
-  'neon-blue': 'focus:border-blue-400',
+  dark: 'focus:border-red-400',
+  light: 'focus:border-red-400',
+  'gym-neon': 'focus:border-red-400',
+  'neon-blue': 'focus:border-red-400',
   'neon-red': 'focus:border-red-400',
-  'neon-purple': 'focus:border-purple-400',
-  'neon-cyan': 'focus:border-cyan-400',
-  sunset: 'focus:border-orange-400'
+  'neon-purple': 'focus:border-red-400',
+  'neon-cyan': 'focus:border-red-400',
+  sunset: 'focus:border-red-400'
 };
 
 export const ringAccents = {
-  dark: 'focus:ring-zinc-500',
-  light: 'focus:ring-zinc-400',
-  'gym-neon': 'focus:ring-lime-400',
-  'neon-blue': 'focus:ring-blue-400',
+  dark: 'focus:ring-red-400',
+  light: 'focus:ring-red-400',
+  'gym-neon': 'focus:ring-red-400',
+  'neon-blue': 'focus:ring-red-400',
   'neon-red': 'focus:ring-red-400',
-  'neon-purple': 'focus:ring-purple-400',
-  'neon-cyan': 'focus:ring-cyan-400',
-  sunset: 'focus:ring-orange-400'
+  'neon-purple': 'focus:ring-red-400',
+  'neon-cyan': 'focus:ring-red-400',
+  sunset: 'focus:ring-red-400'
 };
 
 export const hoverBorderAccents = {
-  dark: 'hover:border-zinc-500/30',
-  light: 'hover:border-zinc-400/30',
-  'gym-neon': 'hover:border-lime-400/30',
-  'neon-blue': 'hover:border-blue-400/30',
+  dark: 'hover:border-red-400/30',
+  light: 'hover:border-red-400/30',
+  'gym-neon': 'hover:border-red-400/30',
+  'neon-blue': 'hover:border-red-400/30',
   'neon-red': 'hover:border-red-400/30',
-  'neon-purple': 'hover:border-purple-400/30',
-  'neon-cyan': 'hover:border-cyan-400/30',
-  sunset: 'hover:border-orange-400/30'
+  'neon-purple': 'hover:border-red-400/30',
+  'neon-cyan': 'hover:border-red-400/30',
+  sunset: 'hover:border-red-400/30'
 };
 
 export const hexAccents = {
-  dark: '#71717a',
-  light: '#a1a1aa',
-  'gym-neon': '#A3E635',
-  'neon-blue': '#60A5FA',
+  dark: '#F87171',
+  light: '#F87171',
+  'gym-neon': '#F87171',
+  'neon-blue': '#F87171',
   'neon-red': '#F87171',
-  'neon-purple': '#C084FC',
-  'neon-cyan': '#22D3EE',
-  sunset: '#FB923C'
+  'neon-purple': '#F87171',
+  'neon-cyan': '#F87171',
+  sunset: '#F87171'
 };
 
 export const bgSoftAccents = {
-  dark: 'bg-zinc-500/10',
-  light: 'bg-zinc-500/10',
-  'gym-neon': 'bg-lime-400/10',
-  'neon-blue': 'bg-blue-400/10',
+  dark: 'bg-red-400/10',
+  light: 'bg-red-400/10',
+  'gym-neon': 'bg-red-400/10',
+  'neon-blue': 'bg-red-400/10',
   'neon-red': 'bg-red-400/10',
-  'neon-purple': 'bg-purple-400/10',
-  'neon-cyan': 'bg-cyan-400/10',
-  sunset: 'bg-orange-400/10'
+  'neon-purple': 'bg-red-400/10',
+  'neon-cyan': 'bg-red-400/10',
+  sunset: 'bg-red-400/10'
 };
 
 export const borderSoftAccents = {
-  dark: 'border-zinc-500/40',
-  light: 'border-zinc-500/40',
-  'gym-neon': 'border-lime-400/40',
-  'neon-blue': 'border-blue-400/40',
+  dark: 'border-red-400/40',
+  light: 'border-red-400/40',
+  'gym-neon': 'border-red-400/40',
+  'neon-blue': 'border-red-400/40',
   'neon-red': 'border-red-400/40',
-  'neon-purple': 'border-purple-400/40',
-  'neon-cyan': 'border-cyan-400/40',
-  sunset: 'border-orange-400/40'
+  'neon-purple': 'border-red-400/40',
+  'neon-cyan': 'border-red-400/40',
+  sunset: 'border-red-400/40'
 };
 
 export const atmosphereColors = {
-  dark: 'rgba(255, 255, 255, 0.02)',
-  light: 'rgba(0, 0, 0, 0.02)',
-  'gym-neon': 'rgba(163, 230, 53, 0.05)',
-  'neon-blue': 'rgba(96, 165, 250, 0.05)',
+  dark: 'rgba(248, 113, 113, 0.05)',
+  light: 'rgba(248, 113, 113, 0.05)',
+  'gym-neon': 'rgba(248, 113, 113, 0.05)',
+  'neon-blue': 'rgba(248, 113, 113, 0.05)',
   'neon-red': 'rgba(248, 113, 113, 0.05)',
-  'neon-purple': 'rgba(192, 132, 252, 0.05)',
-  'neon-cyan': 'rgba(34, 211, 238, 0.05)',
-  sunset: 'rgba(251, 146, 60, 0.05)'
+  'neon-purple': 'rgba(248, 113, 113, 0.05)',
+  'neon-cyan': 'rgba(248, 113, 113, 0.05)',
+  sunset: 'rgba(248, 113, 113, 0.05)'
 };
 
 export default function App() {
@@ -173,7 +175,7 @@ export default function App() {
             const newProfile: UserProfile = {
               uid: u.uid,
               name: u.displayName || 'Usuário',
-              theme: 'gym-neon'
+              theme: 'neon-red'
             };
             setDoc(profileRef, newProfile);
             setProfile(newProfile);
@@ -187,7 +189,7 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  const themeKey = (profile?.theme || 'gym-neon') as keyof typeof themes;
+  const themeKey = (profile?.theme || 'neon-red') as keyof typeof themes;
   const themeClass = themes[themeKey];
   const accentClass = accentColors[themeKey];
   const bgAccentClass = bgAccents[themeKey];
@@ -240,6 +242,7 @@ export default function App() {
     { id: 'dieta', label: 'Plano IA', icon: Utensils },
     { id: 'loutrista', label: 'LOUtrista', icon: Apple },
     { id: 'diario', label: 'Diário', icon: BookOpen },
+    { id: 'sono', label: 'Sono', icon: Moon },
     { id: 'treinos', label: 'Treinos', icon: Dumbbell },
     { id: 'suplementos', label: 'Suplementos', icon: Pill },
     { id: 'evolução', label: 'Evolução', icon: TrendingUp },
@@ -343,6 +346,7 @@ export default function App() {
             {activeTab === 'dieta' && <Diet profile={profile} user={user} />}
             {activeTab === 'loutrista' && <LOUtrista profile={profile} user={user} />}
             {activeTab === 'diario' && <Diary profile={profile} user={user} />}
+            {activeTab === 'sono' && <Sleep profile={profile} user={user} />}
             {activeTab === 'treinos' && <Workouts profile={profile} user={user} />}
             {activeTab === 'suplementos' && <Supplements profile={profile} user={user} />}
             {activeTab === 'evolução' && <Evolution profile={profile} user={user} />}

@@ -1052,19 +1052,38 @@ export default function CustomDiet({ profile, user }: Props) {
                                   />
                                 </div>
                               </div>
-                              <div className="flex justify-end gap-2 pt-1">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-1">
                                 <button
-                                  onClick={() => setEditingFood(null)}
-                                  className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold"
+                                  type="button"
+                                  onClick={handleEstimateEditFoodAI}
+                                  disabled={!editFoodName.trim() || isCalculatingSingleFoodAI}
+                                  className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border",
+                                    isCalculatingSingleFoodAI
+                                      ? "bg-zinc-800 text-zinc-500 border-zinc-700"
+                                      : cn(bgSoftAccentClass, accentClass, borderSoftAccentClass, "hover:bg-opacity-20")
+                                  )}
+                                  title="Preencher calorias e macros automaticamente com IA"
                                 >
-                                  Cancelar
+                                  <Sparkles size={13} />
+                                  {isCalculatingSingleFoodAI ? "Calculando com IA..." : "Preencher com IA"}
                                 </button>
-                                <button
-                                  onClick={handleSaveEditFood}
-                                  className={cn("px-4 py-1.5 rounded-xl text-black font-black text-xs", bgAccentClass)}
-                                >
-                                  Salvar Alterações
-                                </button>
+                                <div className="flex items-center gap-2 self-end sm:self-auto">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingFood(null)}
+                                    className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold"
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveEditFood}
+                                    className={cn("px-4 py-1.5 rounded-xl text-black font-black text-xs", bgAccentClass)}
+                                  >
+                                    Salvar Alterações
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1219,26 +1238,43 @@ export default function CustomDiet({ profile, user }: Props) {
                             className="bg-zinc-800 border border-zinc-700 px-3 py-2 rounded-xl text-xs text-white font-bold outline-none"
                           />
                         </div>
-                        <div className="flex justify-between items-center pt-1">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-1">
                           <span className="text-[11px] text-zinc-400 font-bold">
-                            💡 Você pode deixar macros em branco e clicar em "Calcular Macros IA" depois!
+                            💡 Você pode deixar os macros em branco: a IA calcula tudo automaticamente para você!
                           </span>
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-2 self-end sm:self-auto">
                             <button
+                              type="button"
+                              onClick={handleEstimateNewFoodAI}
+                              disabled={!newFoodName.trim() || isCalculatingSingleFoodAI}
+                              className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border",
+                                isCalculatingSingleFoodAI
+                                  ? "bg-zinc-800 text-zinc-500 border-zinc-700"
+                                  : cn(bgSoftAccentClass, accentClass, borderSoftAccentClass, "hover:bg-opacity-20")
+                              )}
+                              title="Preencher calorias e macros automaticamente com IA"
+                            >
+                              <Sparkles size={13} />
+                              {isCalculatingSingleFoodAI ? "Calculando..." : "Preencher IA"}
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setAddingFoodToMealId(null)}
                               className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold transition-all"
                             >
                               Cancelar
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleAddFood(meal.id)}
-                              disabled={!newFoodName.trim()}
+                              disabled={!newFoodName.trim() || isCalculatingSingleFoodAI}
                               className={cn(
                                 "px-4 py-1.5 rounded-xl text-black font-black text-xs transition-all",
-                                newFoodName.trim() ? bgAccentClass : "bg-zinc-700 text-zinc-500 cursor-not-allowed"
+                                newFoodName.trim() && !isCalculatingSingleFoodAI ? bgAccentClass : "bg-zinc-700 text-zinc-500 cursor-not-allowed"
                               )}
                             >
-                              Adicionar
+                              {isCalculatingSingleFoodAI ? "Calculando..." : "Adicionar"}
                             </button>
                           </div>
                         </div>

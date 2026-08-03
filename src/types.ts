@@ -171,4 +171,23 @@ export interface CustomDietDayLog {
   updatedAt?: any;
 }
 
+export interface SleepLog {
+  id?: string;
+  userId: string;
+  date: string; // YYYY-MM-DD
+  bedtime: string; // ex: "23:00"
+  waketime: string; // ex: "07:00"
+  quality?: 'excellent' | 'good' | 'regular' | 'poor';
+  notes?: string;
+  aiReport?: {
+    summary: string;
+    cortisolAnalysis: string;
+    hormoneImpact: string;
+    circadianScore: number;
+    recommendations: string[];
+  } | null;
+  timestamp?: any;
+}
+
+
 

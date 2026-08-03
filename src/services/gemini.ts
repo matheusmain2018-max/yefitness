@@ -181,3 +181,39 @@ export async function calculateDayMacros(payload: { textReport?: string; items?:
   }
 }
 
+export async function analyzeSleep(payload: {
+  bedtime: string;
+  waketime: string;
+  date: string;
+  quality?: string;
+  notes?: string;
+  profile?: UserProfile | null;
+}) {
+  const response = await fetch('/api/ai/analyze-sleep', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    let errorMsg = 'Erro ao analisar sono com IA';
+    try {
+      const errorData = JSON.parse(text);
+      errorMsg = errorData.error || errorMsg;
+    } catch {
+      errorMsg = `Erro do servidor (${response.status}): ${text.substring(0, 100)}`;
+    }
+    throw new Error(errorMsg);
+  }
+
+  const resultText = await response.text();
+  try {
+    return JSON.parse(resultText);
+  } catch (err) {
+    console.error("Failed to parse sleep analysis response:", resultText);
+    throw new Error("Resposta inválida da IA. Tente novamente.");
+  }
+}
+
+
