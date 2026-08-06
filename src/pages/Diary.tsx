@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Utensils, Dumbbell, Pill, Timer, Sparkles, Loader2, CheckCircle2, XCircle, Info } from 'lucide-react';
 import { db } from '../services/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { generateDailyReport } from '../services/gemini';
-import { Meal, Workout, Supplement, Cardio, UserProfile } from '../types';
+import { Meal, Workout, Supplement, Cardio, UserProfile, CustomDietPlan, CustomDietDayLog } from '../types';
 import { format, isToday, parseISO, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn, accentColors, bgAccents, ringAccents, bgSoftAccents } from '../App';
@@ -23,7 +23,8 @@ export default function Diary({ profile, user }: Props) {
   const bgSoftAccentClass = bgSoftAccents[themeKey];
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [meals, setMeals] = useState<Meal[]>([]);
+  const [explicitMeals, setExplicitMeals] = useState<Meal[]>([]);
+  const [customDietMeals, setCustomDietMeals] = useState<Meal[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [cardios, setCardios] = useState<Cardio[]>([]);
@@ -32,6 +33,15 @@ export default function Diary({ profile, user }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const targets = useMemo(() => {
+    if (profile?.targetCalories && profile?.targetProtein && profile?.targetCarbs && profile?.targetFat) {
+      return {
+        calories: profile.targetCalories,
+        protein: profile.targetProtein,
+        carbs: profile.targetCarbs,
+        fat: profile.targetFat
+      };
+    }
+
     if (!profile || !profile.weight || !profile.height || !profile.age || !profile.gender) {
       return { calories: 2000, protein: 150, carbs: 250, fat: 65 };
     }
@@ -50,7 +60,7 @@ export default function Diary({ profile, user }: Props) {
 
     let tdee = bmr * activityMultipliers[profile.activityLevel || 'moderate'];
     if (profile.goal === 'lose') tdee -= 500;
-    else if (profile.goal === 'gain') tdee += 500;
+    else if (profile.goal === 'gain') tdee += 350;
 
     return {
       calories: Math.round(tdee),
@@ -60,12 +70,13 @@ export default function Diary({ profile, user }: Props) {
     };
   }, [profile]);
 
+  // Fetch meals, custom diet items checked today, workouts, supplements, cardios
   useEffect(() => {
     if (!user) return;
 
     const unsubscribes = [
       onSnapshot(query(collection(db, 'meals'), where('userId', '==', user.uid), where('date', '==', selectedDate)), (snap) => {
-        setMeals(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Meal)));
+        setExplicitMeals(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Meal)));
       }),
       onSnapshot(query(collection(db, 'workouts'), where('userId', '==', user.uid), where('date', '==', selectedDate)), (snap) => {
         setWorkouts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Workout)));
@@ -78,10 +89,76 @@ export default function Diary({ profile, user }: Props) {
       })
     ];
 
+    // Load custom diet day log + custom diet plan
+    const loadCustomDietForDate = async () => {
+      try {
+        const dayRef = doc(db, 'users', user.uid, 'custom_diet_days', selectedDate);
+        const daySnap = await getDoc(dayRef);
+        const planRef = doc(db, 'users', user.uid, 'custom_diet_plan', 'default');
+        const planSnap = await getDoc(planRef);
+
+        const syntheticMeals: Meal[] = [];
+
+        if (daySnap.exists() && planSnap.exists()) {
+          const dayLog = daySnap.data() as CustomDietDayLog;
+          const plan = planSnap.data() as CustomDietPlan;
+
+          const checkedIds = dayLog.checkedItemIds || [];
+          if (checkedIds.length > 0 && plan.meals) {
+            plan.meals.forEach(meal => {
+              const checkedInMeal = meal.items.filter(item => checkedIds.includes(item.id));
+              if (checkedInMeal.length > 0) {
+                const desc = `${meal.name}: ${checkedInMeal.map(i => `${i.name} (${i.quantity || '1 porção'})`).join(', ')}`;
+                const cals = checkedInMeal.reduce((s, i) => s + (i.calories || 0), 0);
+                const prot = checkedInMeal.reduce((s, i) => s + (i.protein || 0), 0);
+                const carb = checkedInMeal.reduce((s, i) => s + (i.carbs || 0), 0);
+                const fat = checkedInMeal.reduce((s, i) => s + (i.fat || 0), 0);
+
+                syntheticMeals.push({
+                  userId: user.uid,
+                  date: selectedDate,
+                  description: desc,
+                  calories: cals,
+                  protein: prot,
+                  carbs: carb,
+                  fat: fat,
+                  timestamp: new Date()
+                });
+              }
+            });
+          }
+
+          // If freeTextReport exists and has AI macros
+          if (dayLog.freeTextReport && dayLog.aiCalculatedMacros) {
+            syntheticMeals.push({
+              userId: user.uid,
+              date: selectedDate,
+              description: `Relato Livre: ${dayLog.freeTextReport}`,
+              calories: dayLog.aiCalculatedMacros.totalCalories || 0,
+              protein: dayLog.aiCalculatedMacros.totalProtein || 0,
+              carbs: dayLog.aiCalculatedMacros.totalCarbs || 0,
+              fat: dayLog.aiCalculatedMacros.totalFat || 0,
+              timestamp: new Date()
+            });
+          }
+        }
+
+        setCustomDietMeals(syntheticMeals);
+      } catch (err) {
+        console.error("Erro ao carregar dieta personalizada no diário:", err);
+      }
+    };
+
+    loadCustomDietForDate();
     setReport(null);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [user, selectedDate]);
+
+  // Combined meals array for the day
+  const meals = useMemo(() => {
+    return [...explicitMeals, ...customDietMeals];
+  }, [explicitMeals, customDietMeals]);
 
   const dailyTotals = useMemo(() => {
     return meals.reduce((acc, curr) => ({

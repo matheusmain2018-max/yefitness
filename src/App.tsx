@@ -13,7 +13,8 @@ import {
   Apple,
   CheckSquare,
   Moon,
-  Salad
+  Salad,
+  ShieldCheck
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout, db } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -33,6 +34,7 @@ import Evolution from './pages/Evolution';
 import Settings from './pages/Settings';
 import LOUtrista from './pages/LOUtrista';
 import Foods from './pages/Foods';
+import AdminDashboard from './pages/AdminDashboard';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -239,9 +241,8 @@ export default function App() {
     );
   }
 
-  const tabs = [
-    { id: 'custom_diet', label: 'Minha Dieta', icon: CheckSquare },
-    { id: 'dieta', label: 'Plano IA', icon: Utensils },
+  const baseTabs = [
+    { id: 'custom_diet', label: 'Dieta & Refeições', icon: Utensils },
     { id: 'alimentos', label: 'Alimentos', icon: Salad },
     { id: 'loutrista', label: 'LOUtrista', icon: Apple },
     { id: 'diario', label: 'Diário', icon: BookOpen },
@@ -251,6 +252,10 @@ export default function App() {
     { id: 'evolução', label: 'Evolução', icon: TrendingUp },
     { id: 'config', label: 'Config', icon: SettingsIcon },
   ];
+
+  const tabs = user?.email === 'matheusmain2018@gmail.com'
+    ? [{ id: 'admin', label: 'Supervisão Admin', icon: ShieldCheck }, ...baseTabs]
+    : baseTabs;
 
   return (
     <div className={cn("min-h-screen transition-all duration-700 relative overflow-hidden", themeClass)}>
@@ -345,8 +350,8 @@ export default function App() {
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="p-4 lg:p-12 max-w-6xl mx-auto"
           >
-            {activeTab === 'custom_diet' && <CustomDiet profile={profile} user={user} />}
-            {activeTab === 'dieta' && <Diet profile={profile} user={user} />}
+            {activeTab === 'admin' && <AdminDashboard profile={profile} user={user} />}
+            {(activeTab === 'custom_diet' || activeTab === 'dieta') && <CustomDiet profile={profile} user={user} />}
             {activeTab === 'alimentos' && <Foods profile={profile} user={user} />}
             {activeTab === 'loutrista' && <LOUtrista profile={profile} user={user} />}
             {activeTab === 'diario' && <Diary profile={profile} user={user} />}

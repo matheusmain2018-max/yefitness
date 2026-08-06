@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   CheckSquare, Plus, Trash2, Sparkles, Calendar, Edit2, Check, X,
   Utensils, Flame, RefreshCw, AlertCircle, Info, ChevronDown, ChevronUp,
-  FileText, Save, Award, ArrowRight, ClipboardList, CheckCircle2
+  FileText, Save, Award, ArrowRight, ClipboardList, CheckCircle2, Loader2
 } from 'lucide-react';
 import { db, auth } from '../services/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, orderBy, getDocs } from 'firebase/firestore';
@@ -148,6 +148,10 @@ export default function CustomDiet({ profile, user }: Props) {
   // Free text report state
   const [freeText, setFreeText] = useState('');
 
+  // AI Meal Generation State
+  const [aiMealText, setAiMealText] = useState('');
+  const [isGeneratingAIMeal, setIsGeneratingAIMeal] = useState(false);
+
   // 1. Load custom diet plan & selected day log
   useEffect(() => {
     if (!user) return;
@@ -255,6 +259,64 @@ export default function CustomDiet({ profile, user }: Props) {
 
     setDayLog(updatedDayLog);
     await saveDayLogToFirestore(updatedDayLog);
+  };
+
+  // Add meal automatically using AI description
+  const handleAddMealFromAIDescription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiMealText.trim() || isGeneratingAIMeal) return;
+
+    setIsGeneratingAIMeal(true);
+    setError(null);
+    try {
+      const result = await calculateDayMacros({
+        textReport: aiMealText.trim(),
+        profile
+      });
+
+      if (result && result.breakdown && result.breakdown.length > 0) {
+        const newMealItems: CustomDietFoodItem[] = result.breakdown.map((item: any, idx: number) => ({
+          id: `item_${Date.now()}_${idx}`,
+          name: item.name || 'Alimento',
+          quantity: item.quantity || '1 porção',
+          calories: Math.round(item.calories || 0),
+          protein: Math.round(item.protein || 0),
+          carbs: Math.round(item.carbs || 0),
+          fat: Math.round(item.fat || 0)
+        }));
+
+        let mealName = 'Refeição IA';
+        const textLower = aiMealText.toLowerCase();
+        if (textLower.includes('café') || textLower.includes('manhã')) mealName = 'Café da Manhã';
+        else if (textLower.includes('almoço')) mealName = 'Almoço';
+        else if (textLower.includes('lanche') || textLower.includes('tarde')) mealName = 'Lanche';
+        else if (textLower.includes('jantar') || textLower.includes('janta')) mealName = 'Jantar';
+        else if (textLower.includes('pré') || textLower.includes('pós')) mealName = 'Pré/Pós Treino';
+
+        const newMeal: CustomDietMeal = {
+          id: `meal_${Date.now()}`,
+          name: mealName,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          items: newMealItems
+        };
+
+        const updatedPlan: CustomDietPlan = {
+          ...plan,
+          meals: [...plan.meals, newMeal]
+        };
+
+        setPlan(updatedPlan);
+        setAiMealText('');
+        await savePlanToFirestore(updatedPlan);
+      } else {
+        setError("Não foi possível extrair os alimentos dessa descrição. Tente incluir quantidades (ex: 200g de arroz, 150g de frango).");
+      }
+    } catch (err: any) {
+      console.error("Erro ao gerar refeição com IA:", err);
+      setError("Falha ao gerar refeição com a IA. Tente novamente.");
+    } finally {
+      setIsGeneratingAIMeal(false);
+    }
   };
 
   // Add new meal
@@ -768,6 +830,56 @@ export default function CustomDiet({ profile, user }: Props) {
               </div>
             </div>
           </div>
+
+          {/* AI Quick Meal Generator Card */}
+          <form onSubmit={handleAddMealFromAIDescription} className="bg-zinc-900/80 border border-zinc-800 p-5 rounded-3xl space-y-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles size={18} className={accentClass} />
+                <h4 className="text-sm font-black uppercase text-white tracking-wide">
+                  Gerar Refeição Instantânea com IA
+                </h4>
+              </div>
+              <span className="text-[10px] font-bold text-zinc-400 bg-zinc-800 px-2.5 py-1 rounded-full">
+                Manual ou IA em 1 só lugar
+              </span>
+            </div>
+            
+            <p className="text-xs text-zinc-400">
+              Escreva o que você comeu ou pretende comer (ex: <span className="text-zinc-300 italic">"Almoço: 200g de arroz integral, 120g de peito de frango grelhado e salada"</span>) e a IA gera a refeição com macros e salva na dieta automaticamente.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Descreva sua refeição ou alimentos aqui..."
+                value={aiMealText}
+                onChange={(e) => setAiMealText(e.target.value)}
+                className="flex-1 bg-black/60 border border-zinc-700/80 rounded-2xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-400"
+              />
+              <button
+                type="submit"
+                disabled={isGeneratingAIMeal || !aiMealText.trim()}
+                className={cn(
+                  "flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-black text-xs text-black transition-all shrink-0 cursor-pointer disabled:opacity-50",
+                  bgAccentClass,
+                  shadowAccentClass
+                )}
+              >
+                {isGeneratingAIMeal ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    Gerar e Salvar
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
 
           {/* New Meal Modal / Form */}
           <AnimatePresence>

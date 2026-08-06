@@ -9,6 +9,14 @@ export interface UserProfile {
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
   healthIssues?: string;
   theme: 'dark' | 'light' | 'gym-neon' | 'sunset' | 'neon-blue' | 'neon-red' | 'neon-purple' | 'neon-cyan';
+  bmi?: number;
+  bmr?: number;
+  tdee?: number;
+  targetCalories?: number;
+  targetProtein?: number;
+  targetCarbs?: number;
+  targetFat?: number;
+  customCalories?: number;
 }
 
 export interface Meal {

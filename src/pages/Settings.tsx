@@ -1,14 +1,95 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { User, Weight, Ruler, AlertCircle, Save, Target, Activity } from 'lucide-react';
+import { User, Weight, Ruler, AlertCircle, Save, Target, Activity, Flame, Sparkles, Scale, HeartPulse, Info } from 'lucide-react';
 import { db } from '../services/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { UserProfile } from '../types';
-import { cn, accentColors, bgAccents, shadowAccents, ringAccents } from '../App';
+import { cn, accentColors, bgAccents, shadowAccents, ringAccents, bgSoftAccents, borderSoftAccents } from '../App';
 
 interface Props {
   profile: UserProfile | null;
   user: any;
+}
+
+export function calculateMetabolics(
+  weight: number,
+  height: number,
+  age: number,
+  gender: 'male' | 'female',
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active',
+  goal: 'lose' | 'maintain' | 'gain'
+) {
+  if (!weight || !height || !age || weight <= 0 || height <= 0 || age <= 0) {
+    return null;
+  }
+
+  // 1. IMC
+  const heightM = height / 100;
+  const bmi = Number((weight / (heightM * heightM)).toFixed(1));
+
+  let bmiCategory = 'Peso Normal';
+  let bmiColor = 'text-green-400 bg-green-500/10 border-green-500/20';
+  if (bmi < 18.5) {
+    bmiCategory = 'Abaixo do peso';
+    bmiColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+  } else if (bmi < 25) {
+    bmiCategory = 'Peso ideal';
+    bmiColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  } else if (bmi < 30) {
+    bmiCategory = 'Sobrepeso';
+    bmiColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+  } else {
+    bmiCategory = 'Obesidade';
+    bmiColor = 'text-red-400 bg-red-500/10 border-red-500/20';
+  }
+
+  // 2. TMB (Mifflin-St Jeor)
+  let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+  if (gender === 'male') {
+    bmr += 5;
+  } else {
+    bmr -= 161;
+  }
+  bmr = Math.round(bmr);
+
+  // 3. TDEE
+  const activityMultipliers: Record<string, number> = {
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    active: 1.725,
+    very_active: 1.9,
+  };
+  const mult = activityMultipliers[activityLevel] || 1.55;
+  const tdee = Math.round(bmr * mult);
+
+  // 4. Target Calories according to goal
+  let targetCalories = tdee;
+  if (goal === 'lose') {
+    targetCalories = Math.max(1200, Math.round(tdee - 500));
+  } else if (goal === 'gain') {
+    targetCalories = Math.round(tdee + 350);
+  }
+
+  // 5. Target Macros
+  const targetProtein = Math.round(weight * 2.0); // 2g/kg
+  const proteinCalories = targetProtein * 4;
+  const targetFat = Math.round((targetCalories * 0.25) / 9); // 25% fats
+  const fatCalories = targetFat * 9;
+  const carbCalories = Math.max(0, targetCalories - proteinCalories - fatCalories);
+  const targetCarbs = Math.round(carbCalories / 4);
+
+  return {
+    bmi,
+    bmiCategory,
+    bmiColor,
+    bmr,
+    tdee,
+    targetCalories,
+    targetProtein,
+    targetCarbs,
+    targetFat,
+  };
 }
 
 export default function Settings({ profile, user }: Props) {
@@ -17,6 +98,9 @@ export default function Settings({ profile, user }: Props) {
   const bgAccentClass = bgAccents[themeKey];
   const shadowAccentClass = shadowAccents[themeKey];
   const ringAccentClass = ringAccents[themeKey];
+  const bgSoftAccentClass = bgSoftAccents[themeKey];
+  const borderSoftAccentClass = borderSoftAccents[themeKey];
+
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     weight: profile?.weight || 0,
@@ -46,7 +130,19 @@ export default function Settings({ profile, user }: Props) {
         theme: 'neon-red'
       });
     }
-  }, [profile?.uid]); // Update only when user changes or first load
+  }, [profile?.uid]);
+
+  // Compute live metabolic values
+  const metabolics = useMemo(() => {
+    return calculateMetabolics(
+      Number(formData.weight),
+      Number(formData.height),
+      Number(formData.age),
+      formData.gender,
+      formData.activityLevel,
+      formData.goal
+    );
+  }, [formData.weight, formData.height, formData.age, formData.gender, formData.activityLevel, formData.goal]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,8 +154,7 @@ export default function Settings({ profile, user }: Props) {
     setIsSaving(true);
     setSaveStatus('idle');
     
-    // Clean data object to ensure no undefined values are sent to Firestore
-    const dataToSave = {
+    const dataToSave: any = {
       name: formData.name || '',
       weight: Number(formData.weight) || 0,
       height: Number(formData.height) || 0,
@@ -70,6 +165,16 @@ export default function Settings({ profile, user }: Props) {
       healthIssues: formData.healthIssues || '',
       theme: 'neon-red'
     };
+
+    if (metabolics) {
+      dataToSave.bmi = metabolics.bmi;
+      dataToSave.bmr = metabolics.bmr;
+      dataToSave.tdee = metabolics.tdee;
+      dataToSave.targetCalories = metabolics.targetCalories;
+      dataToSave.targetProtein = metabolics.targetProtein;
+      dataToSave.targetCarbs = metabolics.targetCarbs;
+      dataToSave.targetFat = metabolics.targetFat;
+    }
 
     try {
       const userRef = doc(db, 'users', user.uid);
@@ -91,7 +196,7 @@ export default function Settings({ profile, user }: Props) {
         <p className="text-zinc-400">Personalize sua experiência e dados biométricos.</p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-12">
+      <form onSubmit={handleSave} className="space-y-10">
         {/* Perfil & Biometria */}
         <section className="space-y-6">
           <div className={cn("flex items-center gap-2 font-black tracking-widest text-xs uppercase", accentClass)}>
@@ -114,6 +219,7 @@ export default function Settings({ profile, user }: Props) {
                 <label className="text-[10px] font-bold text-zinc-500 ml-1">Peso (kg)</label>
                 <input 
                   type="number" 
+                  step="0.1"
                   value={formData.weight || ''}
                   onChange={e => setFormData({...formData, weight: Number(e.target.value)})}
                   className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-4 px-4 focus:outline-none focus:ring-2", ringAccentClass)}
@@ -169,9 +275,9 @@ export default function Settings({ profile, user }: Props) {
                 onChange={e => setFormData({...formData, goal: e.target.value as any})}
                 className={cn("w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 appearance-none", ringAccentClass)}
               >
-                <option value="lose">Emagrecer / Definição</option>
-                <option value="maintain">Manter Peso / Saúde</option>
-                <option value="gain">Ganhar Peso / Massa</option>
+                <option value="lose">Emagrecer / Definição (-500 kcal)</option>
+                <option value="maintain">Manter Peso / Saúde (Manutenção)</option>
+                <option value="gain">Ganhar Peso / Massa (+350 kcal)</option>
               </select>
             </div>
 
@@ -190,6 +296,89 @@ export default function Settings({ profile, user }: Props) {
               </select>
             </div>
           </div>
+        </section>
+
+        {/* CÁLCULO METABÓLICO AUTOMÁTICO IA */}
+        <section className="p-6 rounded-3xl bg-zinc-900/90 border border-zinc-800/80 space-y-6 relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-2.5 rounded-2xl", bgSoftAccentClass)}>
+                <Sparkles size={20} className={accentClass} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                  Cálculo Metabólico IA
+                </h3>
+                <p className="text-xs text-zinc-400">Calculado automaticamente com base no seu perfil</p>
+              </div>
+            </div>
+            {metabolics && (
+              <span className={cn("px-3 py-1 text-xs font-bold rounded-full border", metabolics.bmiColor)}>
+                {metabolics.bmiCategory}
+              </span>
+            )}
+          </div>
+
+          {metabolics ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">IMC</span>
+                  <p className="text-2xl font-black text-white mt-1">{metabolics.bmi}</p>
+                  <span className="text-[10px] text-zinc-400">kg/m²</span>
+                </div>
+
+                <div className="bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">Basal (TMB)</span>
+                  <p className="text-2xl font-black text-amber-400 mt-1">{metabolics.bmr}</p>
+                  <span className="text-[10px] text-zinc-400">kcal em repouso</span>
+                </div>
+
+                <div className="bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">Gasto Total (TDEE)</span>
+                  <p className="text-2xl font-black text-orange-400 mt-1">{metabolics.tdee}</p>
+                  <span className="text-[10px] text-zinc-400">kcal gastas/dia</span>
+                </div>
+
+                <div className={cn("p-4 rounded-2xl border bg-zinc-950/80", borderSoftAccentClass)}>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Meta p/ Dieta</span>
+                  <p className={cn("text-2xl font-black mt-1", accentClass)}>{metabolics.targetCalories}</p>
+                  <span className="text-[10px] text-zinc-400">kcal recomendadas</span>
+                </div>
+              </div>
+
+              {/* Macros Recomendados */}
+              <div className="bg-zinc-950/80 p-4 rounded-2xl border border-zinc-800/80 space-y-3">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span className="font-bold text-zinc-300">Macros diários sugeridos para o seu objetivo:</span>
+                  <span className="text-[10px] text-zinc-500">Gera metas automáticas na dieta</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 block">Proteína</span>
+                    <span className="text-base font-black text-sky-400">{metabolics.targetProtein}g</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 block">Carboidratos</span>
+                    <span className="text-base font-black text-orange-400">{metabolics.targetCarbs}g</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 block">Gorduras</span>
+                    <span className="text-base font-black text-red-400">{metabolics.targetFat}g</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-zinc-400 bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/50 flex items-center gap-2">
+                <Info size={14} className={accentClass} />
+                <span>Ao clicar em "Salvar Alterações", esta meta de <b>{metabolics.targetCalories} kcal</b> será aplicada diretamente no seu plano de dieta!</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-500 italic">
+              Preencha seu peso, altura e idade acima para calcular seu IMC, metabolismo basal e meta diária automaticamente.
+            </p>
+          )}
         </section>
 
         {/* Saúde */}
@@ -225,13 +414,13 @@ export default function Settings({ profile, user }: Props) {
               Salvando...
             </span>
           ) : saveStatus === 'success' ? (
-            'Alterações Salvas!'
+            'Alterações & Metas Aplicadas com Sucesso!'
           ) : saveStatus === 'error' ? (
             'Erro ao Salvar'
           ) : (
             <>
               <Save size={20} />
-              Salvar Alterações
+              Salvar Alterações & Aplicar na Dieta
             </>
           )}
         </button>

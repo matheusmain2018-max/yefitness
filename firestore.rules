@@ -9,16 +9,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'matheusmain2018@gmail.com';
+    }
+
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return (isSignedIn() && request.auth.uid == userId) || isAdmin();
     }
 
     function isDataOwner() {
-      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+      return (isSignedIn() && request.resource.data.userId == request.auth.uid) || isAdmin();
     }
     
     function existingDataOwner() {
-      return isSignedIn() && resource.data.userId == request.auth.uid;
+      return (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
     }
 
     match /users/{userId} {
@@ -30,37 +34,37 @@ service cloud.firestore {
     }
 
     match /meals/{id} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isDataOwner();
       allow update, delete: if existingDataOwner();
     }
 
     match /workouts/{id} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isDataOwner();
       allow update, delete: if existingDataOwner();
     }
 
     match /supplements/{id} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isDataOwner();
       allow update, delete: if existingDataOwner();
     }
 
     match /cardios/{id} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isDataOwner();
       allow update, delete: if existingDataOwner();
     }
 
     match /evolution/{id} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isDataOwner();
       allow update, delete: if existingDataOwner();
     }
 
     match /trainingAnalyses/{id} {
-      allow read, write: if isSignedIn() && id.split('_')[0] == request.auth.uid;
+      allow read, write: if (isSignedIn() && id.split('_')[0] == request.auth.uid) || isAdmin();
     }
   }
 }
